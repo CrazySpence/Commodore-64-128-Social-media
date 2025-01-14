@@ -1,0 +1,288 @@
+program CharPad;
+//A couple procedures for printing 2x2 charpad tiles and maps
+//Can Also scroll the screen on NTSC 
+var  
+    const useKernal : byte = 0;
+    g_currentBank   : byte = 0;
+    scroll,startx,i,k,l: byte;
+    const charsetLocation: address = $2000;
+    const charsetLocation1: address = $6000;
+    charsetSMB0: IncBin("smbc/smbmcChar.bin",charsetLocation);
+    charsetSMB1: IncBin("smbc/smbmcChar.bin",charsetLocation1);
+    colors    : Incbin("smbc/smbmcColour.bin",charsetLocation+$3d8);
+    tile_data : Incbin("smbc/smbmcTiles.bin",charsetLocation+$3d8+$f7);
+    map_data  : Incbin("smbc/smbmcMap.bin",$3000);
+   //map_data  : Incbin("resources/charsets/smbmc_map.bin",$3000); //single page map for PrintMap(); tests
+
+   // pointers used for copying data
+   src,dst:pointer;
+   m:pointer; //Map data pointer
+   //Text Scroller
+   scroller : cstring = (" THIS IS A SCROLLER TEST PROGRAM DOING FULL SCREEN SCROLLING ON NTSC              ",
+                         " NEEDS A BIT MORE OPIMIZATION BUT IT IS THE FURTHEST IVE GOTTEN ON PURE TRSE YET  ",
+                         "        SHOUTOUT TO LEUAT FOR MAKING TRSE ALSO SHOUTOUT TO SUBCHRIST SOFTWARE FOR ",
+                         "MAKING CHARPAD AND SPRITEPAD PRO I LOVE THOSE APPS!",
+                         "                                        ");
+   tp : pointer;
+   //Music
+   //I want to see if this can still play music while scrolling
+   sidfile: incsid("resources/sid/delta_005.sid",2);  
+
+@startblock $254c "Charpad Scroller" 
+// Prints a 2x2 block at position x,y with the upper left value of c, (and c+1, c+2 and c+3)
+// Also prints colors based of the "colors" pointer 
+// Original credit to the TRSE game tutorial with minor modifications
+procedure print2x2block(x,y,c:byte);
+begin
+    //prints a 2x2 block to bank0
+    moveto(x,y,hi(screen_char_loc));
+    screenmemory[0] :=tile_data[c];
+    screenmemory[1] :=tile_data[c+1];
+    screenmemory[40]:=tile_data[c+2];
+    screenmemory[41]:=tile_data[c+3];
+    //Colouring, the tile_data will return the char value via c and thus provide the correct item to colour
+    moveto(x,y,hi(screen_col_loc));
+    screenmemory[0] :=colors[tile_data[c]];
+    screenmemory[1] :=colors[tile_data[c+1]];
+    screenmemory[40]:=colors[tile_data[c+2]];
+    screenmemory[41]:=colors[tile_data[c+3]];
+end;
+
+procedure print2x2bpBank(x,y,c : byte);
+begin
+    //print piece of block depending on the bank (g_currentBank), first half of a tile on bank0 
+    //second half on bank1 or whatever
+    if g_currentBank=0 offpage then begin
+        moveto(x,y,hi(screen_char_loc));
+		    screenmemory[0] := tile_data[c];
+	      screenmemory[40]:= tile_data[c+2];
+	      //Colouring, the tile_data will return the char value via c and thus provide the correct item to colour
+	      moveto(x,y,hi(screen_col_loc));
+	      screenmemory[0] :=colors[tile_data[c]];
+	      screenmemory[40]:=colors[tile_data[c+2]];
+    end else begin
+		    moveto(x,y,hi(screen_char_loc2));
+		    screenmemory[0] := tile_data[c+1];
+       	screenmemory[40]:= tile_data[c+3];
+       	moveto(x,y,hi(screen_col_loc));
+	      screenmemory[0] :=colors[tile_data[c+1]];
+	      screenmemory[40]:=colors[tile_data[c+3]];
+    end;
+end;
+
+procedure print2x2blockBank(x,y,c:byte);
+begin
+    //prints a full 2x2 block to bank0 or bank1 depending on g_currentBank
+    if g_currentBank=0 offpage then begin
+	      moveto(x,y,hi(screen_char_loc));
+    end else begin
+	      moveto(x,y,hi(screen_char_loc2));
+    end;
+    screenmemory[0] :=tile_data[c];
+	  screenmemory[1] :=tile_data[c+1];
+	  screenmemory[40]:=tile_data[c+2];
+	  screenmemory[41]:=tile_data[c+3];
+    //Colouring, the tile_data will return the char value via c and thus provide the correct item to colour
+	  moveto(x,y,hi(screen_col_loc));
+	  screenmemory[0] :=colors[tile_data[c]];
+	  screenmemory[1] :=colors[tile_data[c+1]];
+	  screenmemory[40]:=colors[tile_data[c+2]];
+	  screenmemory[41]:=colors[tile_data[c+3]];
+end;
+
+//Print out single screen map in map data.
+//Should do some math like map value * 4 as tile_data is a tile every 4 chars
+//This one is good for single screen maps. No Scrolling
+procedure printMap();
+begin
+    k:=1;
+    l:=1;
+    for i:=1 to 240 do begin
+	      print2x2block(k,l,map_data[i]*4);
+		    k:=k+2;
+		    if k = 41 then begin
+            k:=1;
+			      l:=l+2;
+		    end;
+	  end;	
+end;
+
+//Print a map starting at mapx
+//assuming mapheight = 12
+//assuming screen tiles = 240
+//Good for initializing a level at a certain point or if you have all your rooms in one map file you can specify the x point to draw
+procedure printLongMap(mapX,mapL:byte);
+begin
+    k:=1;
+	  l:=0;
+	  m:=#map_data+mapX;
+	  for i:=1 to 240 do begin
+		    //Print the characters to the correct VIC Bank
+		    print2x2blockBank(k,l,@m[0]*4);
+		    k:=k+2;
+		    if k = 41 then begin
+			      k:=1;
+			      l:=l+2;
+			      m:=m+mapL-20;
+		    end;
+	      m:=m+1
+	  end;	
+end;
+
+//After a left scroll shift print new end line to the map
+//When scrolling you need to backfill in the map 1 column at a time
+procedure printMapLine(mapX,mapL,cx:byte); //cx = character X, that is where it will print the column of map data
+begin
+    k:=cx;
+    l:=0;
+    m:=#map_data+mapX;
+    for i:=0 to 12 do begin
+	      //Print the characters to the correct VIC Bank
+		    print2x2bpBank(k,l,@m[0]*4);
+		    l:=l+2;
+		    m:=m+mapL;
+	   end;		
+end;
+
+/*
+ Switches between bank 0 and 1
+*/
+
+procedure SwitchBank();
+begin
+    if g_currentBank=0 then begin
+		    SetBank(VIC_BANK1);
+	      setcharsetlocation(charsetLocation1);	
+	  end else begin
+		    SetBank(VIC_BANK0);
+	      setcharsetlocation(charsetLocation);
+        inc(startx);
+		    if(startx = 60) then startx := 1;	
+    end;
+	  g_currentBank:=(g_currentBank+1)&1;
+	  setmulticolormode();
+	  HideBorderx(1);
+end;
+
+procedure CopyScreen();
+//Copies entire screen +1 into the next bank character memory, uses 90% of raster in that frame
+begin
+    if g_currentBank=0 then begin
+	      src:=#screen_char_loc+1;
+	      dst:=#screen_char_loc2;
+	  end else begin
+        src:=#screen_char_loc2+1;
+	      dst:=#screen_char_loc;
+    end;     
+	  for i:=0 to screen_height do begin
+		    memcpyunroll(src,0,dst,screen_width);	
+		    src+=screen_width;
+		    dst+=screen_width;
+	  end;
+end;
+
+procedure CopyColourScreen();
+//Copies entire colour screen +1 into colour ram, uses 90% of raster in that frame
+begin
+    src:=#screen_col_loc+1;
+    dst:=#screen_col_loc;
+    for i:=0 to screen_height do begin
+		    memcpyunroll(src,0,dst,screen_width);	
+		    src+=screen_width;
+		    dst+=screen_width;
+	  end;
+end;
+
+procedure UpdateScroll();
+begin
+    if (scroll) then 
+		    dec(scroll)
+	  else 
+	      scroll:=7;
+end;
+
+interrupt RasterMain();
+begin
+    StartIRQ(useKernal);
+//	screen_bg_col := black;
+//	screen_bg_col := blue;
+    if scroll = 7 then begin 
+        printMapLine(startx,60,39);
+        tp := tp+1;
+        if tp[0] = 0 then tp := #scroller;
+        if g_currentBank=0 then moveto(39,24,hi(screen_char_loc))
+        else moveto(39,24,hi(screen_char_loc2));
+        printstring(#tp,0,1);
+        moveto(39,24,hi(screen_col_loc));
+        screenmemory[0]:=yellow;
+    end;    
+//	screen_bg_col := black;
+//	screen_bg_col := red;
+    if scroll = 5 then CopyScreen(); //Works with tear --fixed, do scrolling register at bottom
+	  if scroll = 0 then begin 
+        CopyColourScreen(); //Works with tear --fixed, do scrolling register at bottom
+        SwitchBank();
+    end;
+//	screen_bg_col := black;
+//	screen_bg_col := white;
+    UpdateScroll();
+	  scrollx(scroll);
+	  call(sidfile_1_play);
+	  CloseIRQ();
+//	screen_bg_col := black;
+end;	
+	
+procedure InitMap();
+begin
+    scroll := 7;
+    scrollx(scroll); //So the map doesnt jerk back when you hit space
+    printLongMap(1,60); //Initial map, poition 1, map is 60 tiles long
+    moveto(10,24,hi(screen_char_loc));
+    printstring("PRESS SPACEBAR",0,14);
+    moveto(10,24,hi(screen_col_loc));
+    fill(screenmemory,yellow,14);
+end;
+
+procedure InitScreen();
+begin
+    //Clear and set up both banks being used
+    SetCharsetLocation(charsetLocation); 
+    //Set Colours
+    screen_fg_col:=black;
+    screen_bg_col:=black;
+    multicolor_char_col[1]:=light_blue;
+    multicolor_char_col[2]:=green;
+    setmulticolormode();
+    HideBorderx(1);
+    clearscreen(key_space, screen_char_loc);
+    SetBank(VIC_BANK1);
+    SetCharsetLocation(charsetLocation); 
+    screen_fg_col:=black;
+    screen_bg_col:=black;
+    multicolor_char_col[1]:=light_blue;
+    multicolor_char_col[2]:=green;
+    setmulticolormode();
+    HideBorderx(1);
+    //char 8 is a blank square in this set
+    clearscreen(key_space, screen_char_loc2);
+    SetBank(VIC_BANK0);
+end;   
+
+begin
+    initsid(sidfile_1_init);
+    startx:=20;
+    tp := #scroller;
+    InitScreen();
+    InitMap();
+	  //Set up interrupt
+   	preventirq();
+   	disableciainterrupts();
+   	SetMemoryConfig(1,@useKernal,0);
+   	while (keypressed(key_space) <> 1) do begin
+    end; 
+    RasterIRQ(RasterMain(),50,useKernal);
+ 	  EnableRasterIRQ();
+ 	  enableirq();
+    Loop();
+end.
+@endblock
