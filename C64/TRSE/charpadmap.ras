@@ -12,21 +12,24 @@ var
     colors    : Incbin("smbc/smbmcColour.bin",charsetLocation+$3d8);
     tile_data : Incbin("smbc/smbmcTiles.bin",charsetLocation+$3d8+$f7);
     map_data  : Incbin("smbc/smbmcMap.bin",$3000);
-   //map_data  : Incbin("resources/charsets/smbmc_map.bin",$3000); //single page map for PrintMap(); tests
-
-   // pointers used for copying data
-   src,dst:pointer;
-   m:pointer; //Map data pointer
-   //Text Scroller
-   scroller : cstring = (" THIS IS A SCROLLER TEST PROGRAM DOING FULL SCREEN SCROLLING ON NTSC              ",
+    //map_data  : Incbin("resources/charsets/smbmc_map.bin",$3000); //single page map for PrintMap(); tests
+    //Screen Address tables
+    screen_addr  : array[25] of integer;
+    screen_addr1 : array[25] of integer;
+    color_addr   : array[25] of integer;
+    // pointers used for copying data
+    src,dst:pointer;
+    m:pointer; //Map data pointer
+    //Text Scroller
+    scroller : cstring = (" THIS IS A SCROLLER TEST PROGRAM DOING FULL SCREEN SCROLLING ON NTSC              ",
                          " NEEDS A BIT MORE OPTIMIZATION BUT IT IS THE FURTHEST IVE GOTTEN ON PURE TRSE YET ",
                          "        SHOUTOUT TO LEUAT FOR MAKING TRSE ALSO SHOUTOUT TO SUBCHRIST SOFTWARE FOR ",
                          "MAKING CHARPAD AND SPRITEPAD PRO I LOVE THOSE APPS!",
                          "                                        ");
-   tp : pointer;
-   //Music
-   //I want to see if this can still play music while scrolling
-   sidfile: incsid("resources/sid/delta_005.sid",2);  
+    tp : pointer;
+    //Music
+    //I want to see if this can still play music while scrolling
+    sidfile: incsid("resources/sid/delta_005.sid",2);  
 
 @startblock $254c "Charpad Scroller" 
 // Prints a 2x2 block at position x,y with the upper left value of c, (and c+1, c+2 and c+3)
@@ -35,13 +38,13 @@ var
 procedure print2x2block(x,y,c:byte);
 begin
     //prints a 2x2 block to bank0
-    moveto(x,y,hi(screen_char_loc));
+    screenmemory := AddressTable(#screen_addr,x,y);
     screenmemory[0] :=tile_data[c];
     screenmemory[1] :=tile_data[c+1];
     screenmemory[40]:=tile_data[c+2];
     screenmemory[41]:=tile_data[c+3];
     //Colouring, the tile_data will return the char value via c and thus provide the correct item to colour
-    moveto(x,y,hi(screen_col_loc));
+    screenmemory := AddressTable(#color_addr,x,y);
     screenmemory[0] :=colors[tile_data[c]];
     screenmemory[1] :=colors[tile_data[c+1]];
     screenmemory[40]:=colors[tile_data[c+2]];
@@ -53,18 +56,18 @@ begin
     //print piece of block depending on the bank (g_currentBank), first half of a tile on bank0 
     //second half on bank1 or whatever
     if g_currentBank=0 offpage then begin
-        moveto(x,y,hi(screen_char_loc));
+        screenmemory := AddressTable(#screen_addr,x,y);
         screenmemory[0] := tile_data[c];
         screenmemory[40]:= tile_data[c+2];
         //Colouring, the tile_data will return the char value via c and thus provide the correct item to colour
-        moveto(x,y,hi(screen_col_loc));
+        screenmemory := AddressTable(#color_addr,x,y);
         screenmemory[0] :=colors[tile_data[c]];
         screenmemory[40]:=colors[tile_data[c+2]];
     end else begin
-        moveto(x,y,hi(screen_char_loc2));
+        screenmemory := AddressTable(#screen_addr1,x,y);
         screenmemory[0] := tile_data[c+1];
         screenmemory[40]:= tile_data[c+3];
-        moveto(x,y,hi(screen_col_loc));
+        screenmemory := AddressTable(#color_addr,x,y);
         screenmemory[0] :=colors[tile_data[c+1]];
         screenmemory[40]:=colors[tile_data[c+3]];
     end;
@@ -74,16 +77,16 @@ procedure print2x2blockBank(x,y,c:byte);
 begin
     //prints a full 2x2 block to bank0 or bank1 depending on g_currentBank
     if g_currentBank=0 offpage then begin
-        moveto(x,y,hi(screen_char_loc));
+        screenmemory := AddressTable(#screen_addr,x,y);
     end else begin
-        moveto(x,y,hi(screen_char_loc2));
+        screenmemory := AddressTable(#screen_addr1,x,y);
     end;
     screenmemory[0] :=tile_data[c];
     screenmemory[1] :=tile_data[c+1];
     screenmemory[40]:=tile_data[c+2];
     screenmemory[41]:=tile_data[c+3];
     //Colouring, the tile_data will return the char value via c and thus provide the correct item to colour
-    moveto(x,y,hi(screen_col_loc));
+    screenmemory := AddressTable(#color_addr,x,y);
     screenmemory[0] :=colors[tile_data[c]];
     screenmemory[1] :=colors[tile_data[c+1]];
     screenmemory[40]:=colors[tile_data[c+2]];
@@ -210,16 +213,16 @@ begin
         printMapLine(startx,60,39);
         tp := tp+1;
         if tp[0] = 0 then tp := #scroller;
-        if g_currentBank=0 then moveto(39,24,hi(screen_char_loc))
-        else moveto(39,24,hi(screen_char_loc2));
+        if g_currentBank=0 then screenmemory := AddressTable(#screen_addr,39,24)
+        else screenmemory := AddressTable(#screen_addr1,39,24);
         printstring(#tp,0,1);
-        moveto(39,24,hi(screen_col_loc));
+        screenmemory := AddressTable(#color_addr,39,24);
         screenmemory[0]:=yellow;
     end;    
 //  screen_bg_col := black;
 //  screen_bg_col := red;
     if scroll = 5 then CopyScreen(); //Works with tear --fixed, do scrolling register at bottom
-	  if scroll = 0 then begin 
+    if scroll = 0 then begin 
         CopyColourScreen(); //Works with tear --fixed, do scrolling register at bottom
         SwitchBank();
     end;
@@ -237,9 +240,9 @@ begin
     scroll := 7;
     scrollx(scroll); //So the map doesnt jerk back when you hit space
     printLongMap(1,60); //Initial map, poition 1, map is 60 tiles long
-    moveto(10,24,hi(screen_char_loc));
+    screenmemory := AddressTable(#screen_addr,10,24);
     printstring("PRESS SPACEBAR",0,14);
-    moveto(10,24,hi(screen_col_loc));
+    screenmemory := AddressTable(#color_addr,10,24);
     fill(screenmemory,yellow,14);
 end;
 
@@ -255,6 +258,9 @@ begin
     setmulticolormode();
     HideBorderx(1);
     clearscreen(key_space, screen_char_loc);
+    //Create Screen and Color memory lookup tables
+    createaddresstable(#screen_addr,screen_char_loc,screen_width,screen_height);
+    createaddresstable(#color_addr,screen_col_loc,screen_width,screen_height);
     SetBank(VIC_BANK1);
     SetCharsetLocation(charsetLocation1); 
     screen_fg_col:=black;
@@ -264,7 +270,10 @@ begin
     setmulticolormode();
     HideBorderx(1);
     clearscreen(key_space, screen_char_loc2);
+    //Create Screen and Color memory lookup tables
+    createaddresstable(#screen_addr1,screen_char_loc2,screen_width,screen_height);
     SetBank(VIC_BANK0);
+    
 end;   
 
 begin
