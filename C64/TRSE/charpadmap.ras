@@ -8,7 +8,6 @@ var
     const charsetLocation: address = $2000;
     const charsetLocation1: address = $6000;
     charsetSMB0: IncBin("smbc/smbmcChar.bin",charsetLocation);
-    charsetSMB1: IncBin("smbc/smbmcChar.bin",charsetLocation1);
     colors    : Incbin("smbc/smbmcColour.bin",charsetLocation+$3d8);
     tile_data : Incbin("smbc/smbmcTiles.bin",charsetLocation+$3d8+$f7);
     map_data  : Incbin("smbc/smbmcMap.bin",$3000);
@@ -276,10 +275,19 @@ begin
     
 end;   
 
+procedure InitBank1Charset();
+//Copy the charset from $2000 to $6000 for VIC_BANK1
+//This should shrink the binary file down quite a bit compared to including it in the prg (from 23KB to 10KB actually)
+begin
+    BlockMemCpy(charsetLocation, charsetLocation1, 4);	//technically this also took 16bytes from the map because 4*256 would be 1KB and the charset was 984bytes
+    //1KB used at $6000 this wont show up in the memory map
+end;
+
 begin
     initsid(sidfile_1_init);
     startx:=20;
     tp := #scroller;
+    InitBank1Charset();
     InitScreen();
     InitMap();
     //Set up interrupt
