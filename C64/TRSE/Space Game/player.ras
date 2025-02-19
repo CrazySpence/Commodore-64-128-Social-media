@@ -1,7 +1,7 @@
 procedure initPlayer();
 begin
-	//Set up default player start pos, reset pointer to sprite, colour sprite, enable sprite 
-	player.x := 160; //Player X pos
+    //Set up default player start pos, reset pointer to sprite, colour sprite, enable sprite 
+    player.x := 160; //Player X pos
     player.y := 210; //player starting Y pos
     player.pBullet := 3; //array position of bullet character
     player.fTimeout := 40; //fire timeout
@@ -18,42 +18,42 @@ end;
 
 procedure killCountDown();
 begin
-	//Respawn Levels have a kill score to reach
-	if(killsCountDown = 0 ) then return;
-	killsCountDown := level.kills - levelKills;
+    //Respawn Levels have a kill score to reach
+    if(killsCountDown = 0 ) then return;
+    killsCountDown := level.kills - levelKills;
 end;
 
 procedure addScore();
 begin
-	//Add score to current score
-	scoreAdd[0] := entities[bullets[i].nearestEntity].scoreT;
-	scoreAdd[1] := entities[bullets[i].nearestEntity].scoreH;
-	BcdAdd( #score, #scoreAdd, 4 );	// add scoreAdd to score
+    //Add score to current score
+    scoreAdd[0] := entities[bullets[i].nearestEntity].scoreT;
+    scoreAdd[1] := entities[bullets[i].nearestEntity].scoreH;
+    BcdAdd( #score, #scoreAdd, 4 );    // add scoreAdd to score
 
 end;
 
 procedure initHUD();
 begin
-	moveto(0,0,hi(screen_col_loc));
-	fill(screenmemory,white, 39); // Fill with yellow text
+    moveto(0,0,hi(screen_col_loc));
+    fill(screenmemory,white, 39); // Fill with yellow text
     screenmemory := AddressTable(#screen_addr,20,0);
     printstring("SCORE: ",0,6);
     if level.respawn = 1 then begin 
-	    screenmemory := AddressTable(#screen_addr,5,0);
+        screenmemory := AddressTable(#screen_addr,5,0);
         printstring("E: ",0,3);
     end;    
 end;
 
 procedure displayScore();
 begin
-	screenmemory := AddressTable(#screen_addr,27,0);
+    screenmemory := AddressTable(#screen_addr,27,0);
     BcdPrint( #score, 4 ); // print the current score
 end;
 
 procedure check1UPScore();
 begin
     if(BcdCompare(#score,#extrascore,4)) then begin
-	    player.lives    := player.lives + 1;
+        player.lives    := player.lives + 1;
         player.extra    := 1; //player got the 1up flagged
         sprite_color[0] := green; //player turns green when getting a 1up, will return to blue next level or death
     end;
@@ -61,14 +61,14 @@ end;
 
 procedure resetScore();
 begin
-	for i := 0 to 5 do begin
-		score[i] := $00;
-	end;
+    for i := 0 to 5 do begin
+        score[i] := $00;
+    end;
 end;
 
 procedure displayKCD();
 begin
-	if level.respawn = 0 then return;
+    if level.respawn = 0 then return;
     screenmemory := AddressTable(#screen_addr,8,0);
     printdecimal(killsCountDown,1);
 end;
