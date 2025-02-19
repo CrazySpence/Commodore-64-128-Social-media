@@ -3,12 +3,12 @@ procedure maintainEntities(); //display and move active entities
 begin
     for i:= player2 to maxEntity do begin //if player2 is on dont maintain entity 0 
         if entities[i].active = 1 then begin
-	        if entities[i].flash > 0 then dec(entities[i].flash)
-	        else sprite_color[entities[i].sprSlot] := entities[i].color; //reset a entities colour
-	        xpointer := entityXArrays[entities[i].apos];
-	        case xpointer[entities[i].xpos] of
-		        -4: begin
-		               entities[i].x := entities[i].x + 5;
+            if entities[i].flash > 0 then dec(entities[i].flash)
+            else sprite_color[entities[i].sprSlot] := entities[i].color; //reset a entities colour
+            xpointer := entityXArrays[entities[i].apos];
+            case xpointer[entities[i].xpos] of
+                -4: begin
+                       entities[i].x := entities[i].x + 5;
 		               xadj := entities[i].x;
 		            end;
                 -3: begin
