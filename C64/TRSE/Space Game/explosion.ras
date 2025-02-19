@@ -1,0 +1,86 @@
+procedure maintainExplosion();
+begin
+    for i := 0 to 7 do begin
+        if explosions[i].active = 1 then begin
+	        if explosions[i].xpos > boomEnd then begin
+                togglebit(SPRITE_BITMASK,explosions[i].sprSlot,0);
+                togglebit(SPRITE_STRETCH_X,explosions[i].sprSlot,0);
+	            togglebit(SPRITE_STRETCH_Y,explosions[i].sprSlot,0); 
+                explosions[i].active := 0;
+	        end else begin
+	            setspriteloc(explosions[i].sprSlot,@spriteLoc/64 + explosionAnim[explosions[i].xpos],0);
+	            spritepos(explosions[i].x,explosions[i].y,explosions[i].sprSlot);
+                inc(explosions[i].xpos);
+            end;    
+        end;
+    end;	
+end;
+
+procedure resetExplosion();
+begin
+    for i := 0 to 7 do begin
+        if explosions[i].active = 1 then begin
+	        togglebit(SPRITE_BITMASK,explosions[i].sprSlot,0); 
+            explosions[i].active := 0;
+        end;
+    end;                 	
+end;
+
+procedure initExplosion();
+begin
+    for k := 0 to 7 do begin
+        if explosions[k].active = 0 then begin
+	        ne := bullets[i].nearestEntity;
+	        if (player2 = 1 and ne = 0) then xadj := 0
+	        else begin
+	            xpointer := entityXArrays[entities[ne].apos];
+	            xadj := xpointer[entities[ne].xpos];
+	        end;
+	        explosions[k].x := entities[ne].x + xadj;
+	        explosions[k].y := entities[ne].y;
+	        explosions[k].xpos := 0;
+	        explosions[k].sprSlot := entities[ne].sprSlot;
+	        if explosions[k].sprSlot > 8 then return;
+	        explosions[k].active := 1;
+	        togglebit(SPRITE_BITMASK,explosions[k].sprSlot,1);
+	        togglebit(SPRITE_MULTICOLOR,explosions[k].sprSlot,1);
+            sprite_color[explosions[k].sprSlot] := yellow;
+            if level.respawn = 1 then initRespawn(); //if level has respawn enabled initRespawn
+           
+            if(musicOn = 0) then PlaySound(sid_channel2, 
+				    15,  // Volume
+				    002,  // Hi byte frequency
+				    188,  // Attack voice 1
+				    247,   // Sustain = 16*15 + release=6
+				    1 + sid_noise,  // Waveform
+				    sid_noise  // waveform
+            ); 
+            return;
+        end;
+    end;	
+end;
+
+procedure initPlayerExplosion();
+begin
+    for k := 0 to 7 do begin
+        if explosions[k].active = 0 then begin
+	        explosions[k].x := player.x;
+	        explosions[k].y := player.y;
+	        explosions[k].xpos := 0;
+	        explosions[k].sprSlot := 0;
+	        explosions[k].active := 1;
+	        togglebit(SPRITE_BITMASK,explosions[k].sprSlot,1);
+	        togglebit(SPRITE_MULTICOLOR,explosions[k].sprSlot,1);
+            sprite_color[explosions[k].sprSlot] := yellow;        
+            if (musicOn = 0) then PlaySound(sid_channel2, 
+				    15,  // Volume
+				    008,  // Hi byte frequency
+				    177,  // Attack voice 1
+				    247,   // Sustain = 16*15 + release=6
+				    1 + sid_noise,  // Waveform
+				    sid_noise  // waveform
+                );    
+            return;
+        end;
+    end;	
+end;

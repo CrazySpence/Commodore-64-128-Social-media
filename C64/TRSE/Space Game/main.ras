@@ -1,0 +1,780 @@
+program SpaceGame;
+@startblock $0810 "Game Variables"
+var
+	//@define DEBUG 1
+	//@define DEBUGLOOP 1
+    @define spriteLoc $2900
+    //Title screen bitmap
+    @export "image/title.flf" "image/title.bin" 256
+    title_image            : Incbin("image/title_data.bin",$a000);
+    title_color            : Incbin("image/title_color.bin",$9000);
+    //Sprite memory locations
+    sprites      : incbin("sprites/SpaceGame - Sprites.bin",@spriteLoc);
+    rapier       : byte = @spriteLoc/64+0;
+	galaxy       : byte = @spriteLoc/64+1;
+	dralthi      : byte = @spriteLoc/64+2;
+	asteroid     : byte = @spriteLoc/64+20;
+	vulture      : byte = @spriteLoc/64+28;
+	lMissile     : byte = @spriteLoc/64+29;
+	rMissile     : byte = @spriteLoc/64+30;
+	lStation     : byte = @spriteLoc/64+31;
+	cStation     : byte = @spriteLoc/64+32;
+	rStation     : byte = @spriteLoc/64+33;
+	//Animated Sprites
+	//Explosion
+	boomStart    : byte = @spriteLoc/64+3;
+	boomEnd      : byte = 11; //0-11 explosion sprites
+	//Respawn 
+    respawnStart : byte = @spriteLoc/64+15;
+    respawnEnd   : byte = 8;
+    roidStart    : byte = @spriteLoc/64+19;
+    roidStop     : byte = 7;
+    //Sprite check vars
+    sprChk         : byte; //Sprite slot check, will be 0 when no sprite is active at current HW sprite
+    slot           : byte; //variable sprite slot, used to set up the entity, explosion, jump etc... sprite
+    //Background Stars
+    star_type = record
+		 x,y   : byte; // Current char position of star 
+		 color : byte; // Current colour of star
+		 sLoc  : integer; //pointer math
+	end;
+    const maxStars : byte = 20; //Max background stars make it dividable by 2 or else!
+	stars          : array[maxStars] of star_type; 
+	starChar       : array[8] of byte = ($48,$49,$4a,$4b,$4c,$4d,$4e,$4f); //different characters for smooth movement
+	starPosF       : byte = 0; //Foreground star array position F
+	starPosB       : byte = 0; //Background star array position B
+	//Entity definitions
+	spawnFDelay    : integer = 200; //Initial firing delay
+	respawnDelay   : integer = 500; //Respawn delay
+	entity_type = record
+		anim    : byte; //Animated 0 or 1
+		aStart  : byte; //Mem Location of sprite, only needed for animated entities
+        aStop   : byte; //Max Frames
+        aFrame  : byte; //Counter for animation
+        aDelay  : byte; //Slow down
+	    x       : integer;
+        y       : byte; //x y pixel pos of entity sprite
+        spawnX  : integer; //for respawn levels the original X soawn of the entity
+        spawnY  : byte; //for respawn levels the original Y spawn of the entity
+        spawnYstartd : integer;
+        color   : byte; //Main color of entity sprite
+        active  : byte; //active or not active, maintainSprite will draw/move based on active/inactive
+        apos    : byte; //Array index for X movement entityXArrays
+        xpos    : byte; //array postion of entity X Array
+        xadj    : byte;
+        yspeed  : byte; //speed of Y movement
+        ystop   : byte; //y value to stop movement
+        ystartd : integer; //delay to start Y movement
+        fDelay  : integer; //fire delay
+        scoreT  : byte; //10-1 value for score
+        scoreH  : byte; //1000-100 value for score
+        health  : byte; //health value
+        crash   : byte; //distance from center to count a hit
+        flash   : byte;
+        sprSlot : byte; //sprite
+        entity  : byte; //numerical represenation of type of entity  
+	end;
+	spawnX : integer;
+    spawnY,spawnYStop,spawnYSpeed : byte;
+    spawnYStartD : integer;
+    spawnApos, spawnColor,spawnType : byte;
+    
+	const maxEntity  : byte = 7;
+	entities : array[maxEntity] of entity_type;
+	bosspiece : array[8] of byte; //If a boss piece is active, used for stage checking
+	const entityXMax : byte = 255;
+	xpointer         : pointer; //pointer to entityXArrays for X movement based on .apos value
+	xadj             : integer;    //X Adjacent value, the entity has an X value and then the movement value is this value + a value from the X array
+	xabuf            : integer;   //check next xadj 
+	
+	entityXArrays    : array[10] of integer; //Array of pointers to X movement Arrays
+	side2sideXArray  : array[101] of byte = (//right
+                           0,  0,  1,  1,  1,  2,  2,  3,  4,  5
+                           ,6,  7,  8,  9, 10, 11, 12, 13, 14, 15
+                           ,16, 17, 18, 19, 20, 21, 22, 23, 24, 25
+                           ,26, 27, 28, 29, 30, 31, 32, 33, 34, 35
+                           ,36, 37, 38, 39, 39, 40, 40, 40, 41, 41
+                            //left 
+                           ,41, 41, 40, 40, 40, 39, 39, 38, 37, 36
+                           ,35, 34, 33, 32, 31, 30, 29, 28, 27, 26
+                           ,25, 24, 23, 22, 21, 20, 19, 18, 17, 16 
+                           ,15, 14, 13, 12, 11, 10,  9,  8,  7,  6
+                           ,5,  4,  3,  2,  2,  1,  1,  1,  0,  0, -1);
+    leftAcross       : array[50] of byte = (
+                         0,4,8,12,16,20,24,28,32,36,
+                         40,44,48,52,56,60,64,68,70,74,78,
+                         82,84,88,90,92,94,96,98,100,102,
+                         103,104,105,106,107,108,109,110,111,112,
+                         113,114,115,116,117,118,119,120,-2 
+                     );
+
+    rightAcross      : array[54] of byte = (
+                         140,120,116,112,108,104,100,96,94,90,86,82,
+                         78,74,70,66,62,58,56,52,48,44,40,38,36,
+                         34,32,30,28,26,24,22,20,19,18,
+                         17,16,15,14,13,12,11,10,9,8,
+                         7,6,5,4,3,2,1,0,-2,
+                      );   
+    straight         : array[2] of byte = ( 0, -2);                   
+    rightMissile     : array[12] of byte = (0,0,0,0,0,0,0,0,0,0,-3,-2);
+    leftMissile      : array[12] of byte = (0,0,0,0,0,0,0,0,0,0,-4,-2);
+    delayRightMissile: array[50] of byte = (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-3,-2);
+    delayLeftMissile : array[80] of byte = (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-4,-2);
+    
+    //Weapons                               
+    bullet_type = record
+	    x,y           : byte; // X Y Coords in char grid
+	    color         : byte; // Color of bullet
+	    active        : byte; // active shooter
+	    xpos          : byte; // bulletChar array pos
+	    dir           : byte; // direction: 0 up 1 down
+	    xp            : integer;
+	    yp            : byte;
+	    nearestEntity : byte;
+	    player2       : byte; //bullet from p2?
+    end;
+    const maxBullet : byte = 10;
+    bullets         : array[maxBullet] of bullet_type;
+    bulletChar      : array[8] of byte = ($3e,$3f,$40,$41,$42,$43,$44,$46);
+    
+    // Location of charset
+	const charsetLoc: address = $2000;
+	charset : incbin("charsets/characters.bin", charsetLoc); //Tech charset but also has 7 chars for star movement and weapons fire
+
+	i,j,k,l,ne      : byte = 0;
+	m,time          : integer;
+	const useKernal : byte = 1;
+	
+    // Position of title screen rirlw scroller raster line
+	const yposRaster : byte=$A0;
+    
+    // music
+    music1 : incsid("music/SPACE LEVEL.sid",2);
+    music2 : incsid("music/space title.sid",2);
+    music3 : incsid("music/space win.sid",2);
+    music4 : incsid("music/raptor-wave1-gt2.sid",2);
+    music5 : incsid("music/raptor-wave2-a.sid",2);
+    currentInit : pointer;
+    currentPlay : pointer;
+    musicOn : byte = 1;
+	//Screen Address tables
+	screen_addr : array[25] of integer;
+	color_addr  : array[25] of integer;
+	
+	//Collision
+	maxDistance   : integer = 320;
+	nearestEntity : integer = 320;
+	crashDistance : integer = 12;
+	explosion_type = record
+	    x       : integer;
+        y       : byte; //x y pixel pos of explosion sprite
+        color   : byte; //Main color of explosion sprite
+        active  : byte; //active or not active, maintainSprite will draw/move based on active/inactive
+        xpos    : byte; //postion of explosionAnim
+        sprSlot : byte;
+	end;
+	explosions    : array[8] of explosion_type;
+    explosionAnim : array[12] of byte =(4,5,6,7,8,9,10,11,12,13,14,15);
+    
+    //Respawn
+    respawn_type = record
+	    x       : integer;
+        y       : byte; //x y pixel pos of sprite
+        yspeed  : byte; //speed of Y movement
+        ystop   : byte; //y value to stop movement
+        ystartd : integer; //delay to start Y movement
+        color   : byte; //Main color of sprite
+        delay   : integer; //countdown til respawn
+        active  : byte; //respawn waiting
+        entity  : byte; //value of type of entity   
+        xpos    : byte; //X array postion
+        xadj    : byte;
+        apos    : byte; //move array index
+        despawn : byte; //Level ending despawn
+        sprSlot : byte; //Sprite slot for respawn Animation  
+    end;
+    respawns    : array[8] of respawn_type;
+    respawnAnim : array[9] of byte =(15,16,17,18,19,18,17,16,15);
+    
+    //player
+    player_type = record
+	    x        : integer; // x y pos of player sprite
+	    y        : byte;
+	    fTimeout : byte; //fire timeout
+	    cTimeout : byte; //new life collision timeout
+	    iTimeout : byte; //input timeout
+	    pBullet  : byte; //Player bullet position
+	    alive    : byte;
+	    lives    : byte; //lives left
+        blink    : byte; 
+        extra    : byte; //extra life
+    end;
+    player : player_type;
+ 
+    //level stuff
+    levelTree  : array[10] of integer; //Array of level pointers
+    curLevel   : byte;    //Array index for array of level subroutine pointers
+    levelSub   : pointer; //pointer to level subroutine
+    gameOver   : byte = 0; //Game lost
+    gameEnd    : byte = 0; //Game beaten 
+    levelKills : byte; //record kills to this var to compare to level.kills
+    levelClean : byte = 0; //Cleanup check
+   
+    level_type = record
+	    lvl      : byte;    // lvl #
+        respawn  : byte;    // respawn level, a respawn level killed enemies respawn to their original positions
+	    scroll   : byte;    // scrolling level, enemies fly towards to player or across the screen 
+	    boss     : byte;    // Boss level
+	    kills    : byte;    // kills reached to complete level. not used for scrolling level 
+	    complete : byte;    // level completed flag
+	    counter  : integer; // counter for level, can be used for various timed events
+	    stage    : byte;    // used for boss level stages
+    end;
+    level : level_type;
+    
+    //HUD
+    killsCountDown: byte;
+    //BCD  Score storage
+    score: array[] of byte = ($00, $00, $00, $00);
+	hiscore: array[] of byte = ($00, $50, $00, $00);
+	extrascore: array[] of byte = ($99, $49, $01, $00); //over 15k is 1up
+	scoreAdd: array[] of byte = ($00, $00, $00, $00);
+	
+	//End game Vars from modified Fading text TRSE tutorial
+	egtime1, egwaitTime,egx,egy,egval : byte = 0; 
+    // @max defines how many texts can be written on the screen at the same time
+	const egmaxx : byte = 6;
+	// Colors to fade between, one per frame
+	egcolors:  array[] of byte = ($01, $01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$0d,$07,$03,$0f,$05,$0a,$0e,$0c,$08,$04,$02,$0b,$09,$06,$06,$06,$06);
+	// Current texts, supports @max 
+    //	text_x, text_y, text_time, text_len:array[max] of byte = (0,0,0,0,0,0);
+	textType = record
+		x,y,time,len : byte;
+	end;
+	text : array[egmaxx] of textType;
+	// Pointer to text and color ram
+	egtextPtr, egcolorPtr:pointer;
+	// the text itself: format
+	// x,y, "string", 0, pause time
+	// terminates with 255, restarts
+	egtext: string = (5,5, "YOU HAVE DEFEATED THE ENEMY FLEET", 0,10,
+						5,7, "CLEARING THE WAY...",0,10,
+						5,9, "FOR OUR INVASION FORCE.", 0,10,
+						5,11, "THIS PLANET WILL BE CONQUERED", 0,10,
+						5,13, "THANKS TO YOU", 0,10,
+						5,17, "YOU WERE THE HOSTILE INVASION FORCE", 0,10,
+                       15,20, " ",0,20,
+						255);
+	//pal     : byte = 0; //Detect PAL, 0 is NTSC
+    //player 2 related variables
+    player2   : byte = 0; //Second player active
+    p1kills   : byte = 0; //p1 player killers
+    p2kills   : byte = 0; //p2 player kills
+    
+//declare subs
+procedure checkInput();
+procedure checkCollision();
+procedure player_bulletCollider();
+procedure entity_bulletCollider();
+procedure initGame();
+procedure initPlayer();
+procedure initStars();
+procedure drawStars();
+procedure maintainStars();
+procedure maintainEntities();
+procedure initEntityBullet();
+procedure initPlayerBullet();
+procedure drawBullet();
+procedure maintainBullet();
+procedure maintainExplosion();
+procedure initExplosion();
+procedure entityHit();
+procedure initRespawn(); 
+procedure maintainRespawn();
+procedure spawn(sX : integer, sY,sYStop,sYSpeed : byte, sYStartD : integer,sApos, sColor,sType : byte);
+procedure spawnDralthi();
+procedure spawnGalaxy();
+procedure spawnAsteroid();
+procedure spawnBigAsteroid();
+procedure spawnVulture();
+procedure spawnMissileR();
+procedure spawnMissileL();
+procedure doGameOver();
+procedure doTitle();
+procedure doLevelStartScreen();
+procedure initDespawn();
+procedure clearRespawn(); 
+interrupt levelTop();
+interrupt levelMiddle();
+interrupt levelBottom();
+interrupt gameRaster();
+procedure initLiveRespawn();
+procedure killCountDown();
+procedure displayKCD();
+procedure initHUD();
+procedure addScore();
+procedure spriteSlot();
+procedure playerHit();
+procedure playerCollision();
+procedure initPlayerExplosion();
+procedure playerDied();
+procedure doShowLives();
+procedure showEntities();
+procedure clearSpriteSlots();
+procedure resetScore();
+procedure initStationBoss();
+procedure maintainStationBoss();
+procedure doEndGame();
+procedure FindAvailableSlot();
+procedure Advance();
+procedure UpdateTextColors();
+procedure Update();
+interrupt RasterEndGame();
+procedure resetFiring();
+procedure check1UPScore();
+
+//debug subs
+//procedure initDebugCol();
+//procedure showDebugCol();
+//procedure showDebugHit();
+@endblock
+@startblock $c000 "More Memory down here!"
+@include "stars.ras"
+@endblock
+@startblock $3181 "Space Game"   
+//include source files, broke up major systems into their own files so I can edit them easier
+@include "entity.ras"
+
+@include "bullet.ras"
+@include "collision.ras"
+@include "explosion.ras"
+@include "respawn.ras"
+@include "player.ras"
+@include "levels.ras"
+@include "boss.ras"
+
+interrupt gameRaster();
+begin
+@ifdef DEBUG
+	screen_bg_col:=white;
+@endif	
+	StartIRQ(useKernal);
+	if player.fTimeout > 0 then dec(player.fTimeout); //Firing delay for player
+	if player.iTimeout > 0 then dec(player.iTimeout); //input delay for player
+	if player.cTimeout > 0 then begin //Start of level/new life collision delay
+        if(player.blink&5 = 0) then begin 
+            togglebit(SPRITE_BITMASK,0,1);
+            player.blink := 0;
+        end else togglebit(SPRITE_BITMASK,0,0); 
+        dec(player.cTimeout); //Collision timeout on new spawn
+        inc(player.blink); //blink counter
+    end;
+    if player.extra = 0 then check1UPScore();
+    inc(time);
+@ifdef DEBUG
+    screen_bg_col:=black;
+	screen_bg_col:=purple;
+@endif	
+    // Play music
+	if(musicOn = 1) then call(currentPlay);
+@ifdef DEBUG	
+	screen_bg_col:=black;
+	screen_bg_col:=red;
+@endif		
+    //Background
+	maintainStars(); //Move,replace
+@ifdef DEBUG	
+	screen_bg_col:=black;	
+	screen_bg_col:=blue;	
+@endif		
+    drawStars(); //Render background
+@ifdef DEBUG	
+	screen_bg_col:=black;
+    screen_bg_col:=brown;
+@endif
+    //move player, px determined in CheckInput()	    
+	spritepos(player.x,player.y,0);
+    if player.alive =  1 then playerCollision(); //Check sprite to sprite collision on player  
+@ifdef DEBUG	
+	screen_bg_col:=black;
+	screen_bg_col:=green;
+@endif
+    //Maintain entites, draw, move
+	maintainEntities();
+	if level.boss = 1 then 	maintainStationBoss();
+@ifdef DEBUG	
+	screen_bg_col:=black;
+	screen_bg_col:=orange;
+@endif
+    //Maintain bullets
+    maintainBullet();	
+@ifdef DEBUG	
+	screen_bg_col:=black;
+	screen_bg_col:=light_green;
+@endif		
+	drawBullet();
+@ifdef DEBUG	
+	screen_bg_col:=black;
+	screen_bg_col:=light_red;
+@endif
+    //Maintain Booms	
+    maintainExplosion();
+@ifdef DEBUG	
+	screen_bg_col:=black;
+	screen_bg_col := grey;
+@endif
+    //Maintain ReSpawns
+    maintainRespawn();
+@ifdef DEBUG	
+	screen_bg_col:=black;
+	screen_bg_col:=yellow;
+@endif
+    //check input
+    checkInput();
+@ifdef DEBUG	
+	screen_bg_col:=black;
+	screen_bg_col:=cyan;
+@endif
+    //Show HUD stuff
+    displayKCD();
+    displayScore();
+@ifdef DEBUG	
+	screen_bg_col:=black;
+@endif	
+//    showDebugCol();
+    CloseIRQ();
+end;
+
+// Check Joystick input for the player
+procedure checkInput();
+begin
+	//Player 1 input
+    Joystick(2);
+    if player.alive = 0 then return;
+    if(joystickleft=1) then begin
+        if player.x > 40 then begin 
+            player.x := player.x - 1;
+            if player.pBullet > 0 then player.pBullet := player.pBullet - 1 //move bullet char array position
+            else player.pBullet := 7; //move to far side of bullet char array position
+        end;
+    end;    
+    if(joystickright=1)	then begin 
+        if player.x < 300 then begin 
+            player.x := player.x + 1;
+            if player.pBullet < 7 then player.pBullet := player.pBullet + 1 //move bullet char array position
+            else player.pBullet := 0; //move to far side of bullet char array position
+        end;
+    end;
+    if(joystickup=1) then begin
+	    if player.y > 150 then begin
+            player.y := player.y - 1;
+        end;   
+    end;
+    if(joystickdown=1) then begin
+	    if player.y < 220 then begin
+            player.y := player.y + 1;
+        end;    
+    end;
+    if (joystickbutton=1 and player.fTimeout = 0) then initPlayerBullet();   
+    
+    //Player 2 activation
+    Joystick(1);
+    if (player2 = 1 AND entities[0].active = 1) then begin
+        if(joystickleft=1) then begin
+            if entities[0].x > 40 then begin 
+                entities[0].x := entities[0].x - 1;
+            end;
+        end;    
+        if(joystickright=1)	then begin 
+            if entities[0].x < 300 then begin 
+                entities[0].x := entities[0].x + 1;
+            end;
+        end;
+        if(joystickup=1) then begin
+	        if entities[0].y > 50 then begin
+                entities[0].y := entities[0].y - 1;
+            end;   
+        end;
+        if(joystickdown=1) then begin
+	        if entities[0].y < 150 then begin
+                entities[0].y := entities[0].y + 1;
+            end;    
+        end;
+    end;    
+    if (joystickbutton=1) then begin
+	    if (player2 = 0 and level.boss = 0) then begin //dont allow player 2 on boss level
+            if entities[0].active = 1 then begin 
+	            xpointer := entityXArrays[entities[0].apos];
+	            xadj := xpointer[(entities[0].xpos)];
+                player2 := 1; //player 2 live
+                entities[0].x := entities[0].x + xadj; //make sure sprite is where the entity was when taking over
+                if(entities[0].x < 33) then entities[0].x  := 33; //level 4 sprites start off screen, put player on screen
+                if(entities[0].x > 300) then entities[0].x := 300;
+                entities[0].fDelay := 50; //player 2 gets shorter fire delay than entities
+            end;
+        end else if (entities[0].fDelay = 0 AND entities[0].active = 1) then begin
+            i := 0;
+            xadj := entities[i].x;
+            initEntityBullet();
+            entities[i].fDelay := 30; //slightly longer than player1
+        end;     
+    end;
+    //musicSFX toggle
+    if ( keypressed( KEY_S ) = 1 and player.iTimeout = 0) then begin
+	    clearSound();
+        if musicOn = 0 then musicOn := 1
+	    else musicOn := 0;   
+	    player.iTimeout := 10;
+    end;
+end;
+
+procedure initSprites();
+begin
+    //Init Sprites, No MultiColour 1 and Multicolour 2 Sprites turned off, no stretching, Colours
+    sprite_multicolor :=%00000000;
+    sprite_bitmask    :=%00000000;
+    sprite_stretch_x  :=$00;
+    sprite_stretch_y  :=$00;
+    SPRITE_MULTICOLOR_REG1 := 12;
+    SPRITE_MULTICOLOR_REG2 := dark_grey;
+end;
+
+procedure initGame();
+begin
+	//Set up variables, wipe screen
+	egtextPtr    := #egtext; //endgame text pointer
+	egtime1      := 0; //end game counter
+    egwaitTime   := 0; //end game delay
+    egx          := 0; //eg x
+    egy          := 0; //eg y
+    egval        := 0;
+	time         := 0; //Game time counter
+	gameEnd      := 0; //End game?
+	gameOver     := 0; //Game over
+	player.extra := 0; //has not recieved extra life
+	player2      := 0; //Disable Player 2
+	p1kills      := 0;
+	p2kills      := 0;
+	ClearScreen(key_space,screen_char_loc);
+    initStars();
+	initSprites();
+	initPlayer();
+	resetScore();
+	
+	curLevel     := 0;   //reset to level 0
+    player.lives := 5;   //Starting lives
+	spawnFDelay  := 200; //Initial firing delay
+	respawnDelay := 500; //Initial Respawn delay
+	
+	currentInit  := $1b00; //Main level Music
+	currentPlay  := $1b03;
+	
+    for i := 0 to maxBullet do begin
+	    bullets[i].active := 0;
+    end;
+end;
+
+procedure initScreen();
+begin
+	setcharsetlocation(charsetLoc);
+	// Clear screen with spaces
+	ClearScreen(key_space,screen_char_loc);	
+	Hideborderx(0);
+	//Create Screen and Color memory lookup tables
+    createaddresstable(#screen_addr,screen_char_loc,screen_width,screen_height);
+	createaddresstable(#color_addr,screen_col_loc,screen_width,screen_height);
+end;
+
+procedure doTitle();
+begin
+	time := 1200;
+    //Switch to bank2 and display bitmap title screen
+    setbank(vic_bank2);
+    initsid(SIDFILE_2_INIT);
+    while (keypressed(key_space) <> 1) do begin //Stay until space
+         waitforverticalblank();
+        // joystick(2); //calling this so the last fire from dying doesn't skip the first level start screen after gameOver
+         call(SIDFILE_2_PLAY);
+         if time = 600 then begin
+	          //Simple text title screen
+	          setbank(vic_bank0);
+              settextmode();
+              setregularcolormode();
+              screen_bg_col := black;
+              ClearScreen(key_space,screen_char_loc);
+              ClearScreen(yellow,screen_col_loc);
+             // Print some static text
+	          moveto(14,4,hi(screen_char_loc));
+	          printstring("SPACE GAME!",0,12);
+	          moveto(10,6,hi(screen_char_loc));
+	          printstring("BY COMMODORESPENCE",0,18);
+	          moveto(17,8,hi(screen_char_loc));
+	          printdecimal(2024,3);
+              moveto(10,18,hi(screen_char_loc));
+              printstring("HISCORE: ",0,9);
+              moveto(19,18,hi(screen_char_loc));
+              BcdPrint( #hiscore, 4 ); // print the current score
+              moveto(9,23,hi(screen_char_loc));
+	          printstring("PRESS SPACE TO START",0,20);
+         end;
+         if time = 1200 then begin
+	         //bitmap title
+	         time := 0;
+	         setbank(vic_bank2);
+	         vic_data_loc := $18;
+             setmulticolormode();
+             setbitmapmode();
+             copyimagecolordata(#title_color,2);
+         end;
+         inc(time);
+    end;
+    clearsound();
+    setbank(vic_bank0);
+    settextmode();
+    setregularcolormode();
+    screen_bg_col := black;
+end;
+
+procedure doGameOver();
+begin
+    joystick(2); //catch if the button is being held
+    // Clear screen with spaces
+	ClearScreen(key_space,screen_char_loc);
+	ClearScreen(yellow,screen_col_loc);
+	if (p2kills > 0 or p1kills > 0) then begin
+	    moveto(10,8,hi(screen_char_loc));
+		printstring("P1 KILLS   P2 KILLS",0,19);
+		moveto(13,9,hi(screen_char_loc));
+		printdecimal(p1kills,2);
+		moveto(24,9,hi(screen_char_loc));
+		printdecimal(p2kills,2);
+    end;
+	// Print some static text
+	moveto(15,12,hi(screen_char_loc));
+	printstring("GAME OVER!",0,40);
+	if(BcdCompare(#score,#hiscore,4)) then begin
+		hiscore := #score;
+		//copy score to hiscore
+		for i := 0 to 5 do begin
+		    hiscore[i] := score[i];
+	    end;
+        moveto(10,18,hi(screen_char_loc));
+        printstring("NEW HISCORE: ",0,13);
+        moveto(23,18,hi(screen_char_loc));
+        BcdPrint( #hiscore, 4 ); // print the current score
+    end;
+    while (joystickbutton = 1) do begin //if button is held wait til they let go
+		joystick(2);
+	end;
+	while (joystickbutton <> 1) do begin //Stay until fire
+        joystick(2);   
+    end;
+    gameOver := 0;
+end;
+
+procedure gameLoop();
+//Game flow sub, simple and to the point. Title screen, set up game, load levels until gameOver, display game over. Start over!
+begin
+	while (1 <> 0) do begin
+	    doTitle(); //Show title until space bar pressed
+        initGame();
+        while(gameOver = 0) do begin
+	         levelSub := levelTree[curLevel];
+             call(levelSub);    //run Level
+             StartRasterChain(gameRaster(),0,useKernal); //Start game Raster until level conditions met
+             while (level.complete = 0) do begin //next step, create level record and have a while level.complete <> 1
+@ifdef DEBUGLOOP
+                 screen_bg_col := light_blue;
+@endif           
+                 while (player.alive =  1 and level.complete = 0) do begin      
+                     if(level.respawn) then begin //respawn level type 
+		                 if (levelKills >= level.kills) then level.complete := 1;
+	                 end;
+	                 //show lives, reset player
+                 end;
+                 if player.alive = 0 then begin
+                     playerDied();
+	                 if player.lives = 0 then begin 
+                         gameOver := 1;
+                         break; 
+                     end else begin 
+                         doShowLives();
+                         StartRasterChain(gameRaster(),0,useKernal); //Start game raster
+                     end;
+                 end;    
+@ifdef DEBUGLOOP 
+                 screen_bg_col := black;
+@endif	             
+             end;
+@ifdef DEBUGLOOP
+             screen_bg_col := light_blue;
+@endif       
+             //make a level clean up cause it goes crazy if you dont
+             doLevelCompleted(); //Level Cleanup
+             if (gameOver = 0) then inc(curLevel);  //Next level index as long as the game is still in play
+             //PreventIRQ(); //Stop GameRaster and do next level or game over
+             if (gameEnd = 1) then doEndGame();
+             clearsound();
+@ifdef DEBUGLOOP
+             screen_bg_col := black;
+@endif	             
+        end;
+        doGameOver(); //Game Over screen
+    end;
+end;
+/*
+procedure initDebugCol();
+begin
+    screenmemory := AddressTable(#screen_addr,5,1);
+    printstring("M: ",0,3);
+    screenmemory := AddressTable(#screen_addr,5,2);
+    printstring("X: ",0,3);	
+end;
+
+procedure showDebugCol();
+begin
+    screenmemory := AddressTable(#screen_addr,8,1);
+    printdecimal(entities[0].x,2);	
+    screenmemory := AddressTable(#screen_addr,8,2);
+    printdecimal(entities[0].y,2);
+end;
+
+procedure showDebugHit();
+begin
+    screenmemory := AddressTable(#screen_addr,12,1);
+    printdecimal(maxDistance,2);	
+    screenmemory := AddressTable(#screen_addr,12,2);
+    printdecimal(crashDistance,2);
+    screenmemory := AddressTable(#screen_addr,16,1);
+    printdecimal(bullets[i].xp,2);	
+    screenmemory := AddressTable(#screen_addr,16,2);
+    printdecimal(bullets[i].yp,2);  	
+    screenmemory := AddressTable(#screen_addr,20,1);
+    printdecimal(entities[0].x,2);	
+    screenmemory := AddressTable(#screen_addr,20,2);
+    printdecimal(entities[0].y,2);  	
+end;
+*/
+begin
+	//Detect PAL
+	//if((peek(^$02A6,0)) = 1) then pal := 1; //PAL detected 
+	//set up pointers once
+	entityXArrays[0] := #side2sideXArray;
+	entityXArrays[1] := #leftAcross;
+	entityXArrays[2] := #rightAcross;
+	entityXArrays[3] := #straight;
+	entityXArrays[4] := #rightMissile;
+	entityXArrays[5] := #leftMissile;
+	entityXArrays[6] := #delayRightMissile;
+	entityXArrays[7] := #delayLeftMissile;
+	
+	initLevels(); //set levels pointers
+	initScreen();	
+	disableciainterrupts();
+	preventirq();
+	setmemoryconfig(1,useKernal,0);
+	//Start game loop
+	gameLoop();
+	Loop(); 
+end.
+@endblock

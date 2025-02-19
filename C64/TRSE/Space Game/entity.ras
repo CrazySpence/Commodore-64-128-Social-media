@@ -1,0 +1,387 @@
+procedure maintainEntities(); //display and move active entities
+
+begin
+    for i:= player2 to maxEntity do begin //if player2 is on dont maintain entity 0 
+        if entities[i].active = 1 then begin
+	        if entities[i].flash > 0 then dec(entities[i].flash)
+	        else sprite_color[entities[i].sprSlot] := entities[i].color; //reset a entities colour
+	        xpointer := entityXArrays[entities[i].apos];
+	        case xpointer[entities[i].xpos] of
+		        -4: begin
+		               entities[i].x := entities[i].x + 5;
+		               xadj := entities[i].x;
+		            end;
+                -3: begin
+		               //dec(entities[i].x); too slow
+		               entities[i].x := entities[i].x - 5;
+		               xadj := entities[i].x;
+		            end;
+	        else xadj := xpointer[entities[i].xpos] + entities[i].x;
+	        spritepos(xadj,entities[i].y,entities[i].sprSlot);
+            inc(entities[i].xpos);
+            if entities[i].anim = 1 then begin
+	            //Animation handler
+	            if(entities[i].aDelay = 0) then begin //respawn animation
+	                setspriteloc(entities[i].sprSlot,(@spriteLoc/64)+entities[i].aStart+entities[i].aFrame,0);
+	                if entities[i].aFrame = entities[i].aStop then entities[i].aFrame := 0
+                    else inc(entities[i].aFrame);
+                    entities[i].aDelay := 6;
+                end else dec(entities[i].aDelay); 
+            end;
+            xabuf := xpointer[entities[i].xpos];
+            if xabuf = -2 then dec(entities[i].xpos);
+            if xabuf = -1 then entities[i].xpos := 0;
+            if entities[i].x > 344 then begin
+	             entities[i].active := 0; //off screen y stop, disable entity 
+	             togglebit(SPRITE_BITMASK,(entities[i].sprSlot),0); //Turn off sprite (this caused SprSlot leak not having it)
+	             if level.respawn = 1 then initLiveRespawn(); //if level has respawn enabled initRespawn    
+            end;
+            if entities[i].ystartd = 0 then begin
+                if entities[i].y < entities[i].ystop then entities[i].y := entities[i].y + entities[i].yspeed;
+                if (entities[i].y >= entities[i].ystop and entities[i].y >= 240) then begin
+	                entities[i].active := 0; //off screen y stop, disable entity 
+	                togglebit(SPRITE_BITMASK,(entities[i].sprSlot),0); //Turn off sprite (this caused SprSlot leak not having it)
+	                if level.respawn = 1 then initLiveRespawn(); //if level has respawn enabled initRespawn
+                end;
+            end else dec(entities[i].ystartd);	
+            if(entities[i].fDelay <> -1) then begin
+                if entities[i].fDelay = 0 then begin
+                    initEntityBullet();
+                    entities[i].fDelay := 100 + (Random() & 40);
+                end else dec(entities[i].fDelay);
+            end;
+        end;
+    end;	
+    if (player2 = 1 AND entities[0].active = 1) then begin
+	    i := 0;
+	    if entities[0].flash > 0 then dec(entities[0].flash)
+	    else sprite_color[entities[0].sprSlot] := grey; //reset a entities colour
+	    xadj := entities[0].x;
+	    spritepos(entities[0].x,entities[0].y,entities[0].sprSlot);
+	    if entities[0].anim = 1 then begin
+	        //Animation handler
+	        if(entities[0].aDelay = 0) then begin //respawn animation
+	            setspriteloc(entities[0].sprSlot,(@spriteLoc/64)+entities[0].aStart+entities[0].aFrame,0);
+	            if entities[0].aFrame = entities[0].aStop then entities[0].aFrame := 0
+                else inc(entities[0].aFrame);
+                entities[0].aDelay := 6;
+            end else dec(entities[0].aDelay); 
+        end;
+        if entities[0].ystartd = 0 then begin
+            if entities[0].y < entities[0].ystop then entities[0].y := entities[0].y + entities[0].yspeed;
+            if (entities[0].y >= entities[0].ystop and entities[0].y >= 240) then begin
+	            entities[0].active := 0; //off screen y stop, disable entity 
+	            togglebit(SPRITE_BITMASK,(entities[0].sprSlot),0); //Turn off sprite (this caused SprSlot leak not having it)
+	            if level.respawn = 1 then initLiveRespawn(); //if level has respawn enabled initRespawn
+            end;
+        end else dec(entities[0].ystartd);	
+        if(entities[0].fDelay <> 0) then dec(entities[0].fDelay);    
+    end;
+end;
+
+procedure resetEntities(); //clean entities after player death or level 
+begin
+    for i:= 0 to maxEntity do begin
+	   if entities[i].active = 1 then begin
+           entities[i].active := 0;
+           togglebit(SPRITE_BITMASK,(entities[i].sprSlot),0); //Turn off sprite
+           initDespawn(); //Jump away  
+       end;    
+    end;	
+end;
+
+procedure resetFiring(); //After player death reset shoot timer so they dont shoot the second you return to gameEnd
+begin
+    for i:= 0 to maxEntity do begin
+         if entities[i].active = 1 then begin
+	         entities[i].fDelay := spawnFDelay + (Random() & 40); 
+         end;
+    end;	
+end;
+
+procedure showEntities(); //toggle bit back on for any disabled sprites that are active
+begin
+    for i := 0 to maxEntity do begin
+	    if entities[i].active = 1 then begin
+		    togglebit(SPRITE_BITMASK,(entities[i].sprSlot),1);        
+	    end;
+	end;
+end;
+
+procedure spawnDralthi();
+
+begin
+	entities[i].color := brown;
+	entities[i].fDelay := spawnFDelay + (Random() & 40);
+	entities[i].scoreT := $50; //50 points
+	entities[i].scoreH := $00; //00 points
+	entities[i].sprSlot := slot;	
+	entities[i].entity := 1; //Dralthi
+	entities[i].anim := 0; //No animation
+	entities[i].aStart := 0;
+	entities[i].aStop := 0;
+	entities[i].aFrame := 0;
+	entities[i].health := 0;
+	entities[i].crash := 12;
+	//Spawn X adjustment
+	//So what happened here is I found an entity coming from the right the spawn animation would be in the wrong position because movement is a positive numver so
+	//an entity that is right moving from the edge might have an X value of 150 but xpos[0] is 150 and then it decrements to move it over so now we will grab xpos[0]s value for SpawnX+xadj  
+	xpointer := entityXArrays[entities[i].apos];
+	xadj := xpointer[entities[i].xpos];
+	entities[i].xadj := xadj;
+	setspriteloc(entities[i].sprSlot,dralthi,0);
+	sprite_color[entities[i].sprSlot] := entities[i].color;
+	togglebit(SPRITE_MULTICOLOR,entities[i].sprSlot,0);
+	spritepos(entities[i].x+xadj,entities[i].y,entities[i].sprSlot);
+	togglebit(SPRITE_BITMASK,entities[i].sprSlot,1);
+	togglebit(SPRITE_STRETCH_X,entities[i].sprSlot,0); //make sure any X,Y stretching is off
+	togglebit(SPRITE_STRETCH_Y,entities[i].sprSlot,0);
+    if (i = 0 and player2 = 1) then begin 
+        entities[i].x := entities[i].x + xadj; //2 player adjustment
+	    if(entities[i].x < 33) then entities[i].x  := 33; //level 4 sprites start off screen, put player on screen
+        if(entities[i].x > 300) then entities[i].x  := 300;
+    end;
+end;
+
+procedure spawnGalaxy();
+begin
+    entities[i].color := spawnColor;
+	entities[i].fDelay := spawnFDelay + (Random() & 40);
+	entities[i].scoreT := $50; //50 points
+	entities[i].scoreH := $01; //100 points 
+	entities[i].sprSlot := slot;
+    entities[i].entity := 2; //Galaxy
+    entities[i].anim := 0; //No animation
+	entities[i].aStart := 0;
+	entities[i].aStop := 0;
+	entities[i].aFrame := 0;
+    entities[i].health := 0;
+    entities[i].crash := 12;	
+    xpointer := entityXArrays[entities[i].apos];
+	xadj := xpointer[entities[i].xpos];
+	entities[i].xadj := xadj;
+	setspriteloc(entities[i].sprSlot,galaxy,0);
+	sprite_color[entities[i].sprSlot] := entities[i].color;
+	togglebit(SPRITE_MULTICOLOR,entities[i].sprSlot,1);
+	spritepos(entities[i].x+xadj,entities[i].y,entities[i].sprSlot);
+	togglebit(SPRITE_BITMASK,entities[i].sprSlot,1);
+	togglebit(SPRITE_STRETCH_X,entities[i].sprSlot,0); //make sure any X,Y stretching is off
+	togglebit(SPRITE_STRETCH_Y,entities[i].sprSlot,0);
+	if (i = 0 and player2 = 1) then begin 
+        entities[i].x := entities[i].x + xadj; //2 player adjustment
+	    if(entities[i].x < 33) then entities[i].x  := 33; //level 4 sprites start off screen, put player on screen
+        if(entities[i].x > 300) then entities[i].x  := 300;
+    end;
+end;
+
+procedure spawnAsteroid();
+begin
+    entities[i].color := brown;
+	entities[i].fDelay := -1;
+	entities[i].scoreT := $00; //00 points
+	entities[i].scoreH := $02; //200 points
+	entities[i].sprSlot := slot;	
+	entities[i].entity := 3; //Asteroid
+	entities[i].anim := 1; //animation
+	entities[i].aStart := 20;
+	entities[i].aStop := 7;
+	entities[i].aFrame := (Random() & 7);
+	entities[i].health := (Random() & 3); //Asteroid health can vary at spawn time
+	entities[i].crash := 12;
+	xpointer := entityXArrays[entities[i].apos];
+	xadj := xpointer[entities[i].xpos];
+	entities[i].xadj := xadj;
+	setspriteloc(entities[i].sprSlot,asteroid,0);
+	sprite_color[entities[i].sprSlot] := entities[i].color;
+	togglebit(SPRITE_MULTICOLOR,entities[i].sprSlot,1);
+	spritepos(entities[i].x+xadj,entities[i].y,entities[i].sprSlot);
+	togglebit(SPRITE_BITMASK,entities[i].sprSlot,1);
+	togglebit(SPRITE_STRETCH_X,entities[i].sprSlot,0); //make sure any X,Y stretching is off
+	togglebit(SPRITE_STRETCH_Y,entities[i].sprSlot,0);
+	if (i = 0 and player2 = 1) then begin 
+        entities[i].x := entities[i].x + xadj; //2 player adjustment
+	    if(entities[i].x < 33) then entities[i].x  := 33; //level 4 sprites start off screen, put player on screen
+        if(entities[i].x > 300) then entities[i].x  := 300;
+    end;
+end;
+
+procedure spawnBigAsteroid();
+begin
+    entities[i].color := brown;
+	entities[i].fDelay := -1;
+	entities[i].scoreT := $00; //00 points
+	entities[i].scoreH := $05; //500 points
+	entities[i].sprSlot := slot;	
+	entities[i].entity := 4; //Big Asteroid
+	entities[i].anim := 1; //No animation
+	entities[i].aStart := 20;
+	entities[i].aStop := 7;
+	entities[i].aFrame := (Random() & 7);
+	entities[i].health := 5; //big Asteroid health
+	entities[i].crash := 26;
+	xpointer := entityXArrays[entities[i].apos];
+	xadj := xpointer[entities[i].xpos];
+	entities[i].xadj := xadj;
+	setspriteloc(entities[i].sprSlot,asteroid,0);
+	sprite_color[entities[i].sprSlot] := entities[i].color;
+	togglebit(SPRITE_MULTICOLOR,entities[i].sprSlot,1);
+	spritepos(entities[i].x+xadj,entities[i].y,entities[i].sprSlot);
+	togglebit(SPRITE_BITMASK,entities[i].sprSlot,1);
+	togglebit(SPRITE_STRETCH_X,entities[i].sprSlot,1);
+	togglebit(SPRITE_STRETCH_Y,entities[i].sprSlot,1);
+	if (i = 0 and player2 = 1) then begin 
+        entities[i].x := entities[i].x + xadj; //2 player adjustment
+	    if(entities[i].x < 33) then entities[i].x  := 33; //level 4 sprites start off screen, put player on screen
+        if(entities[i].x > 300) then entities[i].x  := 300;
+    end;
+end;
+
+procedure spawnVulture();
+begin
+    entities[i].color := red;
+	entities[i].fDelay := spawnFDelay + (Random() & 40);
+	entities[i].scoreT := $50; //50 points
+	entities[i].scoreH := $02; //200 points
+	entities[i].sprSlot := slot;	
+	entities[i].entity := 5; //Vulture
+	entities[i].anim := 0; //No animation
+	entities[i].aStart := 0;
+	entities[i].aStop := 0;
+	entities[i].aFrame := 0;
+	entities[i].health := 1; //Vulture takes 2 hits
+	entities[i].crash := 12;
+	xpointer := entityXArrays[entities[i].apos];
+	xadj := xpointer[entities[i].xpos];
+	entities[i].xadj := xadj;
+	setspriteloc(entities[i].sprSlot,vulture,0);
+	sprite_color[entities[i].sprSlot] := entities[i].color;
+	togglebit(SPRITE_MULTICOLOR,entities[i].sprSlot,0);
+	spritepos(entities[i].x+xadj,entities[i].y,entities[i].sprSlot);
+	togglebit(SPRITE_BITMASK,entities[i].sprSlot,1);
+	togglebit(SPRITE_STRETCH_X,entities[i].sprSlot,0); //make sure any X,Y stretching is off
+	togglebit(SPRITE_STRETCH_Y,entities[i].sprSlot,0);
+	if (i = 0 and player2 = 1) then begin 
+        entities[i].x := entities[i].x + xadj; //2 player adjustment
+	    if(entities[i].x < 33) then entities[i].x  := 33; //level 4 sprites start off screen, put player on screen
+        if(entities[i].x > 300) then entities[i].x  := 300;
+    end;
+end;
+
+procedure spawnMissileR();
+begin
+    entities[i].color := red;
+	entities[i].fDelay := -1;
+	entities[i].scoreT := $50; //50 points
+	entities[i].scoreH := $02; //200 points
+	entities[i].sprSlot := slot;	
+	entities[i].entity := 6; //R Missile
+	entities[i].anim := 0; //No animation
+	entities[i].aStart := 0;
+	entities[i].aStop := 0;
+	entities[i].aFrame := 0;
+	entities[i].health := 0; 
+	entities[i].crash := 12;
+    xpointer := entityXArrays[entities[i].apos];
+    xadj := xpointer[entities[i].xpos];
+	entities[i].xadj := xadj;
+	setspriteloc(entities[i].sprSlot,rMissile,0);
+	sprite_color[entities[i].sprSlot] := entities[i].color;
+	togglebit(SPRITE_MULTICOLOR,entities[i].sprSlot,1);
+	spritepos(entities[i].x+xadj,entities[i].y,entities[i].sprSlot);
+	togglebit(SPRITE_BITMASK,entities[i].sprSlot,1);
+	togglebit(SPRITE_STRETCH_X,entities[i].sprSlot,1);
+	togglebit(SPRITE_STRETCH_Y,entities[i].sprSlot,0);
+end;
+
+procedure spawnMissileL();
+begin
+    entities[i].color := red;
+	entities[i].fDelay := -1;
+	entities[i].scoreT := $50; //50 points
+	entities[i].scoreH := $02; //200 points
+	entities[i].sprSlot := slot;	
+	entities[i].entity := 7; //L Missile
+	entities[i].anim := 0; //No animation
+	entities[i].aStart := 0;
+	entities[i].aStop := 0;
+	entities[i].aFrame := 0;
+	entities[i].health := 0; 
+	entities[i].crash := 12;       
+	xpointer := entityXArrays[entities[i].apos];
+	xadj := xpointer[entities[i].xpos];
+	entities[i].xadj := xadj;
+	setspriteloc(entities[i].sprSlot,lMissile,0);
+	sprite_color[entities[i].sprSlot] := entities[i].color;
+	togglebit(SPRITE_MULTICOLOR,entities[i].sprSlot,1);
+	spritepos(entities[i].x+xadj,entities[i].y,entities[i].sprSlot);
+	togglebit(SPRITE_BITMASK,entities[i].sprSlot,1);
+	togglebit(SPRITE_STRETCH_X,entities[i].sprSlot,1); 
+	togglebit(SPRITE_STRETCH_Y,entities[i].sprSlot,0);
+end;
+
+procedure spriteSlot();
+begin
+    //find a slot
+    slot := 255;
+    for k := 1 to 8 do begin
+        sprChk := getbit(SPRITE_BITMASK,k);
+        if(sprChk = 0) then begin 
+            slot := k;
+            togglebit(SPRITE_STRETCH_X,slot,0); 
+	        togglebit(SPRITE_STRETCH_Y,slot,0);
+            break;
+        end;
+    end;	
+end;
+
+procedure clearSpriteSlots();
+//Clear all sprite slots
+begin
+    for i := 0 to 8 do begin
+	    togglebit(SPRITE_BITMASK,i,0);
+    end;
+end;
+
+procedure spawn(sX : integer, sY,sYStop,sYSpeed : byte, sYStartD : integer,sApos, sColor,sType : byte);
+begin
+	spawnX       := sX;
+	spawnY       := sY;
+	spawnYStop   := sYStop;
+	spawnYSpeed  := sYSpeed;
+	spawnYStartD := sYStartD;
+	spawnApos    := sApos;
+	spawnColor   := sColor;
+	spawnType    := sType;
+	
+    spriteSlot();
+	if slot = 255 then return; //no slot 
+	for i:=0 to maxEntity do begin
+		if entities[i].active = 0 then begin
+			if (player2 = 1 and sType = 6) then break;
+            if (player2 = 1 and sType = 7) then break;
+			//Set variables common to all entity spawns
+			entities[i].active := 1;
+		    entities[i].x := spawnX;
+	        entities[i].y := spawnY;
+	        entities[i].spawnX := spawnX;
+	        entities[i].spawnY := spawnY;
+	        entities[i].apos := spawnApos; //Movement array
+	        entities[i].xpos := 0;
+	        entities[i].ystop := spawnYStop;
+	        entities[i].yspeed := spawnYSpeed;
+	        entities[i].ystartd := spawnYStartD;
+	        entities[i].spawnYstartd := spawnYStartD;
+	        entities[i].flash := 0;
+	        case spawnType of
+	            1: spawnDralthi();
+	            2: spawnGalaxy();
+	            3: spawnAsteroid();
+	            4: spawnBigAsteroid();
+	            5: spawnVulture();
+	            6: spawnMissileR();
+	            7: spawnMissileL();
+            end;
+            return;
+        end;
+    end;	
+end;
