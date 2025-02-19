@@ -3,7 +3,7 @@ begin
     //Boss Stage set up, if either the left or right piece exists the center is invincible
     //If Both pieces are alive, stage 0, if 1 or the other is alive, stage 1, if none are alive , stage 2
     if (bosspiece[0] = 1 or bosspiece[1] = 1) then begin
-	    if entities[2].flash > 0 then begin 
+	if entities[2].flash > 0 then begin 
             sprite_color[entities[2].sprSlot] := red; //hit flash is red instead of white to indicate it isnt taking damage
             entities[2].health := 10; // main station piece keeps health til both sides are destroyed
         end;
@@ -12,11 +12,11 @@ begin
     if (bosspiece[0] = 1 and bosspiece[1] = 1) then level.stage := 0;
     if (bosspiece[0] = 0 and bosspiece[1] = 0) then level.stage := 2;
     if (bosspiece[2] = 0) then begin
-	    //You won somehow
-	    level.complete := 1;
-	    gameEnd  := 1;
-	    gameOver := 1;
-	    return; // prevent spawning entities below if timer lines up 
+	//You won somehow
+	level.complete := 1;
+	gameEnd  := 1;
+	gameOver := 1;
+	return; // prevent spawning entities below if timer lines up 
     end;
     //outside the loop stage actions, spawn objects
     if level.stage = 0 then begin
@@ -27,10 +27,10 @@ begin
         end;
         //Shoot missiles from the side
         if (level.counter = 600) then begin
-	        spawn(320,220,220,0,0,4,red,6); //Missile right   
+	    spawn(320,220,220,0,0,4,red,6); //Missile right   
         end;
         if (level.counter = 699) then begin
-	        spawn(0,200,200,0,0,5,red,7); //Missile Left   
+	    spawn(0,200,200,0,0,5,red,7); //Missile Left   
         end;
     end;
     if level.stage = 1 then begin
@@ -40,10 +40,10 @@ begin
             spawn(285,0,250,2,0,3,red,5);   
         end;
         if (level.counter = 600) then begin
-	        spawn(320,220,220,0,0,4,red,6);    
+	    spawn(320,220,220,0,0,4,red,6);    
         end;
         if (level.counter = 699) then begin
-	        spawn(0,200,200,0,0,5,red,7);    
+	    spawn(0,200,200,0,0,5,red,7);    
         end;
     end;
     if level.stage = 2 then begin
@@ -52,11 +52,11 @@ begin
             spawn(285,0,250,2,0,3,red,5);   
         end;
         if (level.counter = 600) then begin
-	        spawn(320,200,200,0,0,4,red,6); //2 missiles from each side
+	    spawn(320,200,200,0,0,4,red,6); //2 missiles from each side
             spawn(320,220,220,0,0,4,red,6);    
         end;
         if (level.counter = 699) then begin
-	        spawn(0,160,160,0,0,5,red,7);
+	    spawn(0,160,160,0,0,5,red,7);
             spawn(0,180,180,0,0,5,red,7);     
         end;
     end;
@@ -66,120 +66,120 @@ end;
 
 procedure initStationBoss();
 begin
-	//Left Piece
+    //Left Piece
     entities[0].sprSlot := 1;
     entities[0].active := 1;
-	entities[0].x := 90;
-	entities[0].y := 75;
-	entities[0].spawnX := 100;
-	entities[0].spawnY := 75;
-	entities[0].color := blue;
-	entities[0].apos := 0; //Default side2side
-	entities[0].xpos := 0;
-	entities[0].ystop := 75;
-	entities[0].yspeed := 0;
-	entities[0].ystartd := 0;
-	entities[0].spawnYstartd := 0;
-	entities[0].fDelay := 200;
-	entities[0].scoreT := $50; //50 points
-	entities[0].scoreH := $09; //900 points 
-	entities[0].sprSlot := 1;
+    entities[0].x := 90;
+    entities[0].y := 75;
+    entities[0].spawnX := 100;
+    entities[0].spawnY := 75;
+    entities[0].color := blue;
+    entities[0].apos := 0; //Default side2side
+    entities[0].xpos := 0;
+    entities[0].ystop := 75;
+    entities[0].yspeed := 0;
+    entities[0].ystartd := 0;
+    entities[0].spawnYstartd := 0;
+    entities[0].fDelay := 200;
+    entities[0].scoreT := $50; //50 points
+    entities[0].scoreH := $09; //900 points 
+    entities[0].sprSlot := 1;
     entities[0].entity := 0; // Doesn't matter for Boss
     entities[0].anim := 0; //No animation
-	entities[0].aStart := 0;
-	entities[0].aStop := 0;
-	entities[0].aFrame := 0;
+    entities[0].aStart := 0;
+    entities[0].aStop := 0;
+    entities[0].aFrame := 0;
     entities[0].health := 5;
     entities[0].crash := 24; //Stretched crash	
     //Spawn X adjustment
-	//So what happened here is I found an entity coming from the right the spawn animation would be in the wrong position because movement is a positive numver so
-	//an entity that is right moving from the edge might have an X value of 150 but xpos[0] is 150 and then it decrements to move it over so now we will grab xpos[0]s value for SpawnX+xadj  
-	xpointer := entityXArrays[entities[0].apos];
-	xadj := xpointer[entities[0].xpos];
-	entities[0].xadj := xadj;
-	setspriteloc(entities[0].sprSlot,lStation,0);
-	sprite_color[entities[0].sprSlot] := entities[0].color;
-	togglebit(SPRITE_MULTICOLOR,entities[0].sprSlot,1);
-	spritepos(entities[0].x+xadj,entities[0].y,entities[0].sprSlot);
-	togglebit(SPRITE_BITMASK,entities[0].sprSlot,1);
-	togglebit(SPRITE_STRETCH_X,entities[0].sprSlot,1); //Big Sprite
-	togglebit(SPRITE_STRETCH_Y,entities[0].sprSlot,1);	
-	bosspiece[0] := 1;
-	//Right Piece
-	entities[1].sprSlot := 2;
-	entities[1].active := 1;
-	entities[1].x := 186;
-	entities[1].y := 75;
-	entities[1].spawnX := 196;
-	entities[1].spawnY := 75;
-	entities[1].color := blue;
-	entities[1].apos := 0; //Default side2side
-	entities[1].xpos := 0;
-	entities[1].ystop := 75;
-	entities[1].yspeed := 0;
-	entities[1].ystartd := 0;
-	entities[1].spawnYstartd := 0;
-	entities[1].fDelay := 200;
-	entities[1].scoreT := $50; //50 points
-	entities[1].scoreH := $09; //900 points 
+    //So what happened here is I found an entity coming from the right the spawn animation would be in the wrong position because movement is a positive numver so
+    //an entity that is right moving from the edge might have an X value of 150 but xpos[0] is 150 and then it decrements to move it over so now we will grab xpos[0]s value for SpawnX+xadj  
+    xpointer := entityXArrays[entities[0].apos];
+    xadj := xpointer[entities[0].xpos];
+    entities[0].xadj := xadj;
+    setspriteloc(entities[0].sprSlot,lStation,0);
+    sprite_color[entities[0].sprSlot] := entities[0].color;
+    togglebit(SPRITE_MULTICOLOR,entities[0].sprSlot,1);
+    spritepos(entities[0].x+xadj,entities[0].y,entities[0].sprSlot);
+    togglebit(SPRITE_BITMASK,entities[0].sprSlot,1);
+    togglebit(SPRITE_STRETCH_X,entities[0].sprSlot,1); //Big Sprite
+    togglebit(SPRITE_STRETCH_Y,entities[0].sprSlot,1);	
+    bosspiece[0] := 1;
+    //Right Piece
+    entities[1].sprSlot := 2;
+    entities[1].active := 1;
+    entities[1].x := 186;
+    entities[1].y := 75;
+    entities[1].spawnX := 196;
+    entities[1].spawnY := 75;
+    entities[1].color := blue;
+    entities[1].apos := 0; //Default side2side
+    entities[1].xpos := 0;
+    entities[1].ystop := 75;
+    entities[1].yspeed := 0;
+    entities[1].ystartd := 0;
+    entities[1].spawnYstartd := 0;
+    entities[1].fDelay := 200;
+    entities[1].scoreT := $50; //50 points
+    entities[1].scoreH := $09; //900 points 
     entities[1].entity := 0; // Doesn't matter for Boss
     entities[1].anim := 0; //No animation
-	entities[1].aStart := 0;
-	entities[1].aStop := 0;
-	entities[1].aFrame := 0;
+    entities[1].aStart := 0;
+    entities[1].aStop := 0;
+    entities[1].aFrame := 0;
     entities[1].health := 5;
     entities[1].crash := 24; //Stretched crash	
     //Spawn X adjustment
-	//So what happened here is I found an entity coming from the right the spawn animation would be in the wrong position because movement is a positive numver so
-	//an entity that is right moving from the edge might have an X value of 150 but xpos[0] is 150 and then it decrements to move it over so now we will grab xpos[0]s value for SpawnX+xadj  
-	xpointer := entityXArrays[entities[1].apos];
-	xadj := xpointer[entities[1].xpos];
-	entities[1].xadj := xadj;
-	setspriteloc(entities[1].sprSlot,rStation,0);
-	sprite_color[entities[1].sprSlot] := entities[1].color;
-	togglebit(SPRITE_MULTICOLOR,entities[1].sprSlot,1);
-	spritepos(entities[1].x+xadj,entities[1].y,entities[1].sprSlot);
-	togglebit(SPRITE_BITMASK,entities[1].sprSlot,1);
-	togglebit(SPRITE_STRETCH_X,entities[1].sprSlot,1); //Big Sprite
-	togglebit(SPRITE_STRETCH_Y,entities[1].sprSlot,1);	
-	bosspiece[1] := 1;
-	//Center piece
-	entities[2].sprSlot := 3;
-	entities[2].active := 1;
-	entities[2].x := 138;
-	entities[2].y := 75;
-	entities[2].spawnX := 148;
-	entities[2].spawnY := 75;
-	entities[2].color := light_grey;
-	entities[2].apos := 0; //Default side2side
-	entities[2].xpos := 0;
-	entities[2].ystop := 75;
-	entities[2].yspeed := 0;
-	entities[2].ystartd := 0;
-	entities[2].spawnYstartd := 0;
-	entities[2].fDelay := 254;
-	entities[2].scoreT := $50; //50 points
-	entities[2].scoreH := $09; //900 points 
+    //So what happened here is I found an entity coming from the right the spawn animation would be in the wrong position because movement is a positive numver so
+    //an entity that is right moving from the edge might have an X value of 150 but xpos[0] is 150 and then it decrements to move it over so now we will grab xpos[0]s value for SpawnX+xadj  
+    xpointer := entityXArrays[entities[1].apos];
+    xadj := xpointer[entities[1].xpos];
+    entities[1].xadj := xadj;
+    setspriteloc(entities[1].sprSlot,rStation,0);
+    sprite_color[entities[1].sprSlot] := entities[1].color;
+    togglebit(SPRITE_MULTICOLOR,entities[1].sprSlot,1);
+    spritepos(entities[1].x+xadj,entities[1].y,entities[1].sprSlot);
+    togglebit(SPRITE_BITMASK,entities[1].sprSlot,1);
+    togglebit(SPRITE_STRETCH_X,entities[1].sprSlot,1); //Big Sprite
+    togglebit(SPRITE_STRETCH_Y,entities[1].sprSlot,1);	
+    bosspiece[1] := 1;
+    //Center piece
+    entities[2].sprSlot := 3;
+    entities[2].active := 1;
+    entities[2].x := 138;
+    entities[2].y := 75;
+    entities[2].spawnX := 148;
+    entities[2].spawnY := 75;
+    entities[2].color := light_grey;
+    entities[2].apos := 0; //Default side2side
+    entities[2].xpos := 0;
+    entities[2].ystop := 75;
+    entities[2].yspeed := 0;
+    entities[2].ystartd := 0;
+    entities[2].spawnYstartd := 0;
+    entities[2].fDelay := 254;
+    entities[2].scoreT := $50; //50 points
+    entities[2].scoreH := $09; //900 points 
     entities[2].entity := 0; // Doesn't matter for Boss
     entities[2].anim := 0; //No animation
-	entities[2].aStart := 0;
-	entities[2].aStop := 0;
-	entities[2].aFrame := 0;
+    entities[2].aStart := 0;
+    entities[2].aStop := 0;
+    entities[2].aFrame := 0;
     entities[2].health := 10;
     entities[2].crash := 24; //Stretched crash	
     //Spawn X adjustment
-	//So what happened here is I found an entity coming from the right the spawn animation would be in the wrong position because movement is a positive numver so
-	//an entity that is right moving from the edge might have an X value of 150 but xpos[0] is 150 and then it decrements to move it over so now we will grab xpos[0]s value for SpawnX+xadj  
-	xpointer := entityXArrays[entities[2].apos];
-	xadj := xpointer[entities[2].xpos];
-	entities[2].xadj := xadj;
-	setspriteloc(entities[2].sprSlot,cStation,0);
-	sprite_color[entities[2].sprSlot] := entities[2].color;
-	togglebit(SPRITE_MULTICOLOR,entities[2].sprSlot,1);
-	spritepos(entities[2].x+xadj,entities[2].y,entities[2].sprSlot);
-	togglebit(SPRITE_BITMASK,entities[2].sprSlot,1);
-	togglebit(SPRITE_STRETCH_X,entities[2].sprSlot,1); //Big Sprite
-	togglebit(SPRITE_STRETCH_Y,entities[2].sprSlot,1);	
-	bosspiece[2] := 1;
-	return;
+    //So what happened here is I found an entity coming from the right the spawn animation would be in the wrong position because movement is a positive numver so
+    //an entity that is right moving from the edge might have an X value of 150 but xpos[0] is 150 and then it decrements to move it over so now we will grab xpos[0]s value for SpawnX+xadj  
+    xpointer := entityXArrays[entities[2].apos];
+    xadj := xpointer[entities[2].xpos];
+    entities[2].xadj := xadj;
+    setspriteloc(entities[2].sprSlot,cStation,0);
+    sprite_color[entities[2].sprSlot] := entities[2].color;
+    togglebit(SPRITE_MULTICOLOR,entities[2].sprSlot,1);
+    spritepos(entities[2].x+xadj,entities[2].y,entities[2].sprSlot);
+    togglebit(SPRITE_BITMASK,entities[2].sprSlot,1);
+    togglebit(SPRITE_STRETCH_X,entities[2].sprSlot,1); //Big Sprite
+    togglebit(SPRITE_STRETCH_Y,entities[2].sprSlot,1);	
+    bosspiece[2] := 1;
+    return;
 end;
