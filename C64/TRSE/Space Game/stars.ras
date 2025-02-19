@@ -1,66 +1,66 @@
 procedure drawStars();
 begin
-	for i := (maxStars/2) to maxStars unroll do begin //Bottom Stars
-	    screenmemory := AddressTable(#screen_addr,stars[i].x,stars[i].y);
-	    screenmemory[0] := starChar[starPosB]; 
-	    screenmemory := AddressTable(#color_addr,stars[i].x,stars[i].y);
-	    screenmemory[0] := stars[i].color; 
+    for i := (maxStars/2) to maxStars unroll do begin //Bottom Stars
+        screenmemory := AddressTable(#screen_addr,stars[i].x,stars[i].y);
+        screenmemory[0] := starChar[starPosB]; 
+        screenmemory := AddressTable(#color_addr,stars[i].x,stars[i].y);
+        screenmemory[0] := stars[i].color; 
     end;
     for i := 0 to (maxStars/2) unroll do begin //Top stars
-	    screenmemory := AddressTable(#screen_addr,stars[i].x,stars[i].y);
-	    screenmemory[0] := starChar[starPosF]; 
-	    screenmemory := AddressTable(#color_addr,stars[i].x,stars[i].y);
-	    screenmemory[0] := stars[i].color; 
+        screenmemory := AddressTable(#screen_addr,stars[i].x,stars[i].y);
+        screenmemory[0] := starChar[starPosF]; 
+        screenmemory := AddressTable(#color_addr,stars[i].x,stars[i].y);
+        screenmemory[0] := stars[i].color; 
     end;    
 end;
 
 procedure maintainStars(); //Move stars, replace off screen stars
 begin
-	 if(time = 4 ) then begin
-	     if (starPosB = 7) then begin
-		     //slower background stars
+     if(time = 4 ) then begin
+         if (starPosB = 7) then begin
+             //slower background stars
              for i:=(maxStars/2) to maxStars do begin   
                  screenmemory := AddressTable(#screen_addr,stars[i].x,stars[i].y);
                  screenmemory[0] := key_space;
                  inc(stars[i].y);
                  if(stars[i].y > 24) then begin //replace star
-	                 stars[i].y := 2;
-	                 stars[i].x := mod(random(),38+1); // Random x-position
+                     stars[i].y := 2;
+                     stars[i].x := mod(random(),38+1); // Random x-position
                  end;
                  starPosB := 0;    
-             end;	
+             end;    
         end else begin
-	        inc(starPosB);
-	    end;  
-	    time := 0;
+            inc(starPosB);
+        end;  
+        time := 0;
     end;
     if(time = 1 OR time = 2) then begin
-	    if (starPosF = 7) then begin
-		    //Foreground stars
+        if (starPosF = 7) then begin
+            //Foreground stars
             for i:= 0 to (maxStars/2) do begin   
                 screenmemory := AddressTable(#screen_addr,stars[i].x,stars[i].y);
                 screenmemory[0] := key_space;
                 inc(stars[i].y);
                 if(stars[i].y > 24) then begin //replace star
-	                stars[i].y := 2;
-	                stars[i].x := mod(random(),38+1); // Random x-position
+                    stars[i].y := 2;
+                    stars[i].x := mod(random(),38+1); // Random x-position
                 end;
                 starPosF := 0;    
-            end;	
+            end;    
         end else begin
-	        inc(starPosF);
+            inc(starPosF);
         end;
     end;
 end;
 
 procedure initStars();
 begin
-	for i := 0 to (maxStars/2) do begin 
+    for i := 0 to (maxStars/2) do begin 
         stars[i].x:=mod(random(),screen_width); // Random x-position
         stars[i].y:=mod(random(),screen_height)+2; // Random y-position
         stars[i].color:= white;
         stars[i].sLoc := stars[i].y * screen_width;
-    end;	
+    end;    
     for i := (maxStars/2) to maxStars do begin 
         stars[i].x:=mod(random(),screen_width); // Random x-position
         stars[i].y:=mod(random(),screen_height)+2; // Random y-position
