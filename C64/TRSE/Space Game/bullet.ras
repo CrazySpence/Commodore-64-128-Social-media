@@ -9,45 +9,44 @@
 
 procedure drawBullet(); //Draw bullets
 begin
-	for i := 0 to maxBullet do begin
-	    if (bullets[i].active = 1) then begin //Bullet is active	
-	        //draw bullet
+    for i := 0 to maxBullet do begin
+        if (bullets[i].active = 1) then begin //Bullet is active	
+            //draw bullet
             screenmemory := AddressTable(#screen_addr,bullets[i].x,bullets[i].y);
             screenmemory[0] := bulletChar[bullets[i].xpos];
             //colour bullet
             screenmemory := AddressTable(#color_addr,bullets[i].x,bullets[i].y);
             screenmemory[0] := bullets[i].color
         end;
-	end;
-	
+    end;
 end;
 
 procedure maintainBullet(); //draw, move, remove bullets
 begin
     for i := 0 to maxBullet do begin
-	    if (bullets[i].active = 1) then begin //Bullet is active
+        if (bullets[i].active = 1) then begin //Bullet is active
             if (bullets[i].y = 23 or bullets[i].y = 2) then begin //bullet should be deactivated
-	            bullets[i].active := 0; //deactivate bullet heading off screen
-	            //Erase a 3 character strip around the bullet to accomadate both entity and player bullets without a cpu costly If structure
-	            screenmemory := AddressTable(#screen_addr,bullets[i].x,bullets[i].y); 
+	        bullets[i].active := 0; //deactivate bullet heading off screen
+	        //Erase a 3 character strip around the bullet to accomadate both entity and player bullets without a cpu costly If structure
+	        screenmemory := AddressTable(#screen_addr,bullets[i].x,bullets[i].y); 
                 screenmemory[0] := key_space; //erase character
                 screenmemory := AddressTable(#screen_addr,bullets[i].x,bullets[i].y-1);
                 screenmemory[0] := key_space; //erase character
                 screenmemory := AddressTable(#screen_addr,bullets[i].x,bullets[i].y+1);
                 screenmemory[0] := key_space; //erase character
             end else begin
-	            if bullets[i].dir = 0 then begin //Bullet going UP aka player bullet
-	                //erase bullet which should be 40 characters ahead
+	        if bullets[i].dir = 0 then begin //Bullet going UP aka player bullet
+	            //erase bullet which should be 40 characters ahead
                     screenmemory := AddressTable(#screen_addr,bullets[i].x,bullets[i].y+1);
                     screenmemory[0] := key_space;
-	                dec(bullets[i].y);
+	            dec(bullets[i].y);
                     bullets[i].yp := bullets[i].yp - 8;
                     //if (bullets[i].yp < entityMaxY) then player_bulletCollider();  
                     player_bulletCollider();
                     if(bullets[i].nearestEntity < 100) then crashDistance := entities[bullets[i].nearestEntity].crash;   
                     //showDebugCol(); 
                     if (maxDistance < crashDistance) then begin 
-	                    bullets[i].active := 0;
+	                bullets[i].active := 0;
                         screenmemory := AddressTable(#screen_addr,bullets[i].x,bullets[i].y+1);
                         screenmemory[0] := key_space; //erase character
                         //showDebugHit();
@@ -55,16 +54,16 @@ begin
                         maxDistance := 344;
                     end;                    
                 end else begin 
-	                crashDistance := 12;
-	                //Downward entity bullet, must do things a little bit different to save some cpu time
-	                screenmemory := AddressTable(#screen_addr,bullets[i].x,bullets[i].y-1);
-	                screenmemory[0] := key_space; //erase previous position bullet
-	                inc(bullets[i].y); //increase Y for next run
+	            crashDistance := 12;
+	            //Downward entity bullet, must do things a little bit different to save some cpu time
+	            screenmemory := AddressTable(#screen_addr,bullets[i].x,bullets[i].y-1);
+	            screenmemory[0] := key_space; //erase previous position bullet
+	            inc(bullets[i].y); //increase Y for next run
                     bullets[i].yp := bullets[i].yp + 8;
-	                entity_bulletCollider();
+	            entity_bulletCollider();
                     if (maxDistance < crashDistance) then begin 
-	                    playerHit();
-	                    if bullets[i].player2 = 1 then inc(p2kills);
+	                playerHit();
+	                if bullets[i].player2 = 1 then inc(p2kills);
                         bullets[i].active := 0;
                         screenmemory := AddressTable(#screen_addr,bullets[i].x,bullets[i].y-1);
                         screenmemory[0] := key_space; //erase character
@@ -78,19 +77,19 @@ end;
 
 procedure resetBullet();
 begin
-	for i := 0 to maxBullet do begin
-	    if (bullets[i].active = 1) then begin //Bullet is active
-	        bullets[i].active := 0;
+    for i := 0 to maxBullet do begin
+        if (bullets[i].active = 1) then begin //Bullet is active
+	    bullets[i].active := 0;
         end;
     end;   
 end;
 
 procedure initPlayerBullet(); //find open bullet slot and set to active, calculate X position, save array position
 begin
-	if level.complete = 1 then return; //fix a bug where holding fire let a completed level go forever
+    if level.complete = 1 then return; //fix a bug where holding fire let a completed level go forever
     for i := 0 to maxBullet do begin
         if bullets[i].active = 0 do begin
-	        bullets[i].x := (player.x-12)/8; //convert sprite X to char X
+	    bullets[i].x := (player.x-12)/8; //convert sprite X to char X
             bullets[i].y  := (player.y-38)/8;
             bullets[i].color := white;
             bullets[i].xpos := player.pBullet; //array position
@@ -102,13 +101,13 @@ begin
             bullets[i].player2 := 0;
             player.fTimeout := 20;
             if (musicOn = 0) then PlaySound(sid_channel3, 
-				    15,  // Volume
-				    016,  // Hi byte frequency
-				    046,  // Attack voice 1
-				    040,   // Sustain = 16*15 + release=6
-				    1 + sid_saw,  // Waveform
-				    sid_saw  // waveform
-				    );
+	        15,  // Volume
+		016,  // Hi byte frequency
+		046,  // Attack voice 1
+		040,   // Sustain = 16*15 + release=6
+		1 + sid_saw,  // Waveform
+		sid_saw  // waveform
+		);
             return;
         end;
     end;	
@@ -116,29 +115,29 @@ end;
 
 procedure initEntityBullet(); //find open bullet slot and set to active, calculate X position, save array position
 begin
-	if level.complete = 1 then return; //fix a bug where rapid entity fire let a completed level go forever
-	if (entities[i].y < 200 and entities[i].y > 50) then begin
-        for k := 0 to maxBullet do begin
-            if bullets[k].active = 0 do begin
-	            bullets[k].x := (xadj-12)/8; //convert sprite X to char X
-                bullets[k].y  := (entities[i].y-38)/8;
-                bullets[k].color := cyan;
-                bullets[k].xpos := 3; //array position
-                bullets[k].dir  := 1; //down
-                bullets[k].active := 1;
-                bullets[k].xp := xadj-12; //establish pixel based x for collisions
-                bullets[k].yp := entities[i].y; //establish pixel based y for collisions
-                bullets[k].nearestEntity := 254;
-                if (player2 = 1 and i = 0) then bullets[k].player2 := 1
-                else bullets[k].player2 := 0;
-                if (musicOn = 0) then PlaySound(sid_channel3, 
-				        15,  // Volume
-				        016,  // Hi byte frequency
-				        046,  // Attack voice 1
-				        040,   // Sustain = 16*15 + release=6
-				        1 + sid_saw,  // Waveform
-				        sid_saw  // waveform
-				        );
+    if level.complete = 1 then return; //fix a bug where rapid entity fire let a completed level go forever
+    if (entities[i].y < 200 and entities[i].y > 50) then begin
+    for k := 0 to maxBullet do begin
+        if bullets[k].active = 0 do begin
+	    bullets[k].x := (xadj-12)/8; //convert sprite X to char X
+            bullets[k].y  := (entities[i].y-38)/8;
+            bullets[k].color := cyan;
+            bullets[k].xpos := 3; //array position
+            bullets[k].dir  := 1; //down
+            bullets[k].active := 1;
+            bullets[k].xp := xadj-12; //establish pixel based x for collisions
+            bullets[k].yp := entities[i].y; //establish pixel based y for collisions
+            bullets[k].nearestEntity := 254;
+            if (player2 = 1 and i = 0) then bullets[k].player2 := 1
+            else bullets[k].player2 := 0;
+            if (musicOn = 0) then PlaySound(sid_channel3, 
+	        15,  // Volume
+		016,  // Hi byte frequency
+		046,  // Attack voice 1
+		040,   // Sustain = 16*15 + release=6
+		1 + sid_saw,  // Waveform
+		sid_saw  // waveform
+		);
                 return;
             end;
         end;
