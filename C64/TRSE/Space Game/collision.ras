@@ -1,7 +1,7 @@
 //Collision functions
 procedure entityHit(); //Entity hit by player bulletChar
 begin
-	if entities[bullets[i].nearestEntity].health = 0 then begin
+    if entities[bullets[i].nearestEntity].health = 0 then begin
         entities[bullets[i].nearestEntity].active := 0; //entity dead
         addScore();
         togglebit(SPRITE_BITMASK,(entities[bullets[i].nearestEntity].sprSlot),0); //Turn off sprite   
@@ -19,9 +19,9 @@ end;
 
 procedure playerHit(); // player hit 
 begin
-	if player.cTimeout > 0 then return;
-	if level.complete = 1 then return;
-	player.alive    := 0;
+    if player.cTimeout > 0 then return;
+    if level.complete = 1 then return;
+    player.alive    := 0;
     sprite_color[0] := red; //player gets hit, just a placeholder
     initPlayerExplosion();	
 end;
@@ -33,48 +33,48 @@ end;
 
 procedure player_bulletCollider();
 var
-	sprX : byte;
+    sprX : byte;
 begin
-	//Determine proximity to closest entity from player bullet
-	//issue with abs hitting 256 value
-	maxDistance := 344;
-	bullets[i].nearestEntity := 100; 
-	for j:=0 to maxEntity do begin
-		if (entities[j].active=1) then begin
-			sprX := 24;
+    //Determine proximity to closest entity from player bullet
+    //issue with abs hitting 256 value
+    maxDistance := 344;
+    bullets[i].nearestEntity := 100; 
+    for j:=0 to maxEntity do begin
+        if (entities[j].active=1) then begin
+            sprX := 24;
             if (j = 0 and player2 = 1) then xadj := 0		
-			else begin
+            else begin
                 xpointer := entityXArrays[entities[j].apos];
-	            xadj := xpointer[(entities[j].xpos)];
-	        end;
-		    m := entities[j].x+xadj; //entity pixel x vs bullet pixel x
-		    if (m - bullets[i].xp < 100 OR bullets[i].xp - m < 100) then begin //had issue where far side entity was being hit because the abs function in TRSE/6502 only handles byte values and > 256 was overflowing
-		        if(getbit(SPRITE_STRETCH_X,entities[j].sprSlot)) = 1 then begin
+	        xadj := xpointer[(entities[j].xpos)];
+            end;
+            m := entities[j].x+xadj; //entity pixel x vs bullet pixel x
+	    if (m - bullets[i].xp < 100 OR bullets[i].xp - m < 100) then begin //had issue where far side entity was being hit because the abs function in TRSE/6502 only handles byte values and > 256 was overflowing
+	        if(getbit(SPRITE_STRETCH_X,entities[j].sprSlot)) = 1 then begin
                     sprX := 48;
                     m := abs(m - (bullets[i].xp - 12)); //shrugs...i dunno...but it works this way with stretched sprites
                 end else begin 
                     m := abs(m - bullets[i].xp);
                 end;
-  		        if m < sprX then begin //only bother checking Y math if bullet is near a sprite 	
-		            l := abs(entities[j].y - bullets[i].yp);	
-		            m:=m + l;			
-		            if m<maxDistance then begin
-			            maxDistance:=m;
-			            bullets[i].nearestEntity:=j;
-		            end;	        
-		        end;
-		    end;
-		end;
-	end;
+                if m < sprX then begin //only bother checking Y math if bullet is near a sprite 	
+		    l := abs(entities[j].y - bullets[i].yp);	
+		    m:=m + l;			
+		    if m<maxDistance then begin
+		        maxDistance:=m;
+			bullets[i].nearestEntity:=j;
+                    end;	        
+                end;
+            end;
+        end;
+    end;
 end;
 
 procedure entity_bulletCollider();
 begin
-	 //Determine proximity of Entity bullet to player
-	 maxDistance := 320;
- 	 if player.alive = 0 then return;
-     m := abs(player.x-12 - bullets[i].xp); //player pixel x vs bullet pixel x
-     l := abs(player.y - bullets[i].yp);
-	 m:=m + l;	
-	 maxDistance:=m;
+    //Determine proximity of Entity bullet to player
+    maxDistance := 320;
+    if player.alive = 0 then return;
+    m := abs(player.x-12 - bullets[i].xp); //player pixel x vs bullet pixel x
+    l := abs(player.y - bullets[i].yp);
+    m:=m + l;	
+    maxDistance:=m;
 end;
