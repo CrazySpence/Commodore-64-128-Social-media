@@ -2,10 +2,10 @@ procedure maintainRespawn(); //Reduce delay, animate warp in, initiate new entit
 begin
     for i := 0 to 8 do begin
         if respawns[i].active = 1 then begin //respawn active
-	        if(respawns[i].delay = 0) then begin //respawn animation
-		        if(respawns[i].sprSlot = 255) then begin //No Sprite slot assigned
-			         //Find Sprite slot
-	                 spriteSlot(); //sets slot, 255 for fail, 0-7 for a real slot
+            if(respawns[i].delay = 0) then begin //respawn animation
+                if(respawns[i].sprSlot = 255) then begin //No Sprite slot assigned
+                     //Find Sprite slot
+                     spriteSlot(); //sets slot, 255 for fail, 0-7 for a real slot
                      if slot = 255 then begin 
                          screen_bg_col:=light_red;
                          break; //No Sprite available
@@ -15,10 +15,10 @@ begin
                      spritepos(respawns[i].x+respawns[i].xadj,respawns[i].y,respawns[i].sprSlot);
                      sprite_color[respawns[i].sprSlot] := white;
                      togglebit(SPRITE_MULTICOLOR,respawns[i].sprSlot,1);
-	                 togglebit(SPRITE_BITMASK,respawns[i].sprSlot,1);
-		        end;
-	            setspriteloc(respawns[i].sprSlot,@spriteLoc/64 + respawnAnim[respawns[i].xpos],0);
-	            spritepos(respawns[i].x+respawns[i].xadj,respawns[i].y,respawns[i].sprSlot);
+                     togglebit(SPRITE_BITMASK,respawns[i].sprSlot,1);
+                end;
+                setspriteloc(respawns[i].sprSlot,@spriteLoc/64 + respawnAnim[respawns[i].xpos],0);
+                spritepos(respawns[i].x+respawns[i].xadj,respawns[i].y,respawns[i].sprSlot);
                 inc(respawns[i].xpos);
                 respawns[i].delay := respawns[i].delay + 2;  
             end else dec(respawns[i].delay);
@@ -26,9 +26,9 @@ begin
                 togglebit(SPRITE_BITMASK,respawns[i].sprSlot,0);
                 respawns[i].active := 0;
                 if respawns[i].despawn = 0 then spawn(respawns[i].x,respawns[i].y,respawns[i].ystop,respawns[i].yspeed,respawns[i].ystartd,respawns[i].apos,respawns[i].color,respawns[i].entity); //initiate spawn         
-	        end;   
+            end;   
         end;
-    end;	
+    end;    
 end;
 
 procedure resetRespawn(); //turn off any current respawn animations after player death or level change
@@ -38,62 +38,62 @@ begin
             respawns[i].active := 0;
             togglebit(SPRITE_BITMASK,respawns[i].sprSlot,0); //disable sprite
         end;
-    end;    	
+    end;        
 end;
 
 procedure initRespawn(); //Set Up Respawn of Entity called by initExplosion()
 begin
     for j := 0 to 8 do begin
         if respawns[j].active = 0 then begin
-	        respawns[j].x := entities[bullets[i].nearestEntity].spawnX ;
-	        respawns[j].y := entities[bullets[i].nearestEntity].spawnY ;
-	        respawns[j].yspeed := entities[bullets[i].nearestEntity].yspeed;
-	        respawns[j].ystop := entities[bullets[i].nearestEntity].ystop;
-	        respawns[j].ystartd := entities[bullets[i].nearestEntity].spawnYstartd;
-	        respawns[j].xpos := 0; //array position
-	        respawns[j].xadj := entities[bullets[i].nearestEntity].xadj;
-	        respawns[j].apos := entities[bullets[i].nearestEntity].apos;
-	        respawns[j].delay := respawnDelay; //delay until respawn
-	        respawns[j].entity := entities[bullets[i].nearestEntity].entity; //who is respawning
-	        respawns[j].color := entities[bullets[i].nearestEntity].color; //Colour of entity
-	        respawns[j].active := 1;
-	        respawns[j].despawn := 0;
-	        respawns[j].sprSlot := 255; //no slot set
+            respawns[j].x := entities[bullets[i].nearestEntity].spawnX ;
+            respawns[j].y := entities[bullets[i].nearestEntity].spawnY ;
+            respawns[j].yspeed := entities[bullets[i].nearestEntity].yspeed;
+            respawns[j].ystop := entities[bullets[i].nearestEntity].ystop;
+            respawns[j].ystartd := entities[bullets[i].nearestEntity].spawnYstartd;
+            respawns[j].xpos := 0; //array position
+            respawns[j].xadj := entities[bullets[i].nearestEntity].xadj;
+            respawns[j].apos := entities[bullets[i].nearestEntity].apos;
+            respawns[j].delay := respawnDelay; //delay until respawn
+            respawns[j].entity := entities[bullets[i].nearestEntity].entity; //who is respawning
+            respawns[j].color := entities[bullets[i].nearestEntity].color; //Colour of entity
+            respawns[j].active := 1;
+            respawns[j].despawn := 0;
+            respawns[j].sprSlot := 255; //no slot set
             return;
         end;
-    end;	
+    end;    
 end;
 
 procedure initLiveRespawn(); //Set Up Respawn of Entity that flew off the map
 begin
     for j := 0 to 8 do begin
         if respawns[j].active = 0 then begin
-	        respawns[j].x := entities[i].spawnX ;
-	        respawns[j].y := entities[i].spawnY ;
-	        respawns[j].yspeed := entities[i].yspeed;
-	        respawns[j].ystop := entities[i].ystop;
-	        respawns[j].ystartd := entities[i].spawnYstartd;
-	        respawns[j].xpos := 0; //array position
-	        respawns[j].xadj := entities[i].xadj;
-	        respawns[j].apos := entities[i].apos;
-	        respawns[j].delay := respawnDelay; //delay until respawn
-	        respawns[j].entity := entities[i].entity; //who is respawning
-	        respawns[j].color := entities[i].color; //Colour of entity
-	        respawns[j].active := 1;
-	        respawns[j].despawn := 0;
-	        respawns[j].sprSlot := 255; //no slot set
+            respawns[j].x := entities[i].spawnX ;
+            respawns[j].y := entities[i].spawnY ;
+            respawns[j].yspeed := entities[i].yspeed;
+            respawns[j].ystop := entities[i].ystop;
+            respawns[j].ystartd := entities[i].spawnYstartd;
+            respawns[j].xpos := 0; //array position
+            respawns[j].xadj := entities[i].xadj;
+            respawns[j].apos := entities[i].apos;
+            respawns[j].delay := respawnDelay; //delay until respawn
+            respawns[j].entity := entities[i].entity; //who is respawning
+            respawns[j].color := entities[i].color; //Colour of entity
+            respawns[j].active := 1;
+            respawns[j].despawn := 0;
+            respawns[j].sprSlot := 255; //no slot set
             return;
         end;
-    end;	
+    end;    
 end;
 
 procedure clearRespawn(); //Clear any current respawns or set inprogress ones to stop after jump animation
 begin
     for j := 0 to 8 do begin
-	    if respawns[j].active = 1 then begin
-		    if respawns[j].sprSlot <> 255 then respawns[j].despawn := 1 //animation in progress (cause sprite slot is set) just stop at end of jump animation
+        if respawns[j].active = 1 then begin
+            if respawns[j].sprSlot <> 255 then respawns[j].despawn := 1 //animation in progress (cause sprite slot is set) just stop at end of jump animation
             else respawns[j].active := 0; //not animating, cancel     
-	    end;
+        end;
     end;
 end;
 
@@ -101,19 +101,19 @@ procedure initDespawn(); //Set Up Respawn animation to facilitae despawning a sp
 begin
     for j := 0 to 8 do begin
         if respawns[j].active = 0 then begin
-	        xpointer := entityXArrays[entities[i].apos];
-	        xadj := xpointer[entities[i].xpos];
-	        respawns[j].x := entities[i].x + xadj; //spawn warpout in correct location
-	        respawns[j].y := entities[i].y ;
-	        respawns[j].xpos := 0; //array position
-	        respawns[j].xadj := 0; //Breaks on despawn if set, combine value on x is good enough
-	        respawns[j].delay := 0; //delay until respawn
-	        respawns[j].entity := entities[i].entity; //who is respawning
-	        respawns[j].color := entities[i].color; //Colour of entity
-	        respawns[j].active := 1;
-	        respawns[j].despawn := 1;
-	        respawns[j].sprSlot := 255; //no slot set
+            xpointer := entityXArrays[entities[i].apos];
+            xadj := xpointer[entities[i].xpos];
+            respawns[j].x := entities[i].x + xadj; //spawn warpout in correct location
+            respawns[j].y := entities[i].y ;
+            respawns[j].xpos := 0; //array position
+            respawns[j].xadj := 0; //Breaks on despawn if set, combine value on x is good enough
+            respawns[j].delay := 0; //delay until respawn
+            respawns[j].entity := entities[i].entity; //who is respawning
+            respawns[j].color := entities[i].color; //Colour of entity
+            respawns[j].active := 1;
+            respawns[j].despawn := 1;
+            respawns[j].sprSlot := 255; //no slot set
             return;
         end;
-    end;	
+    end;    
 end;
